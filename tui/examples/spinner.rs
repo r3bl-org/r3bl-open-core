@@ -1,8 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT, IntoErr, OutputDevice,
-               SGR_FG_RED_STR, SGR_RESET_STR, SpinnerColor, SpinnerStyle,
-               SpinnerTemplate, TuiAvailability, assert_terminal_is_interactive, ok,
+use r3bl_tui::{ARTIFICIAL_UI_DELAY, DELAY_MS, DELAY_UNIT, OutputDevice, SGR_FG_RED_STR,
+               SGR_RESET_STR, SpinnerColor, SpinnerStyle, SpinnerTemplate,
+               assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, SafeInlineString, Spinner},
                run_in_main_with_safe_stack, underline};
 use std::{io::Write, time::Duration};
@@ -84,10 +84,7 @@ async fn try_main_impl() -> miette::Result<()> {
 
 #[allow(unused_assignments)]
 async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<()> {
-    let rl_ctx = match ReadlineAsyncContext::try_new(Some("$ "), None).await {
-        TuiAvailability::Available(rl_ctx) => rl_ctx,
-        it => return it.into_err(),
-    };
+    let rl_ctx = ReadlineAsyncContext::try_new(Some("$ "), None).await?;
     let address = "127.0.0.1:8000";
     let message_trying_to_connect = format!(
         "This is a sample indeterminate progress message: trying to connect to server on {address}"
@@ -96,7 +93,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
     let mut shared_writer = rl_ctx.clone_shared_writer();
 
     // Start spinner. Automatically pauses the terminal.
-    let mut maybe_spinner = match Spinner::try_start(
+    let mut maybe_spinner = Spinner::try_start(
         message_trying_to_connect,
         "Sample FINAL message for the spinner: Connected to server",
         DELAY_UNIT,
@@ -105,10 +102,7 @@ async fn example_with_concurrent_output(style: SpinnerStyle) -> miette::Result<(
         Some(shared_writer.clone()),
     )
     .await
-    {
-        TuiAvailability::Available(spinner) => Some(spinner),
-        _ => None,
-    };
+    .ok();
 
     // Start another task to simulate some async work that uses an interval to display
     // output for a fixed amount of time, using the shared writer.
@@ -154,7 +148,7 @@ async fn example_with_concurrent_output_no_readline_async(
     );
 
     // Start spinner.
-    let mut maybe_spinner = match Spinner::try_start(
+    let mut maybe_spinner = Spinner::try_start(
         message_trying_to_connect,
         "Sample FINAL message for the spinner: Connected to server",
         DELAY_UNIT,
@@ -163,10 +157,7 @@ async fn example_with_concurrent_output_no_readline_async(
         None,
     )
     .await
-    {
-        TuiAvailability::Available(spinner) => Some(spinner),
-        _ => None,
-    };
+    .ok();
 
     // Simulate some async work.
     sleep(ARTIFICIAL_UI_DELAY).await;
@@ -185,15 +176,12 @@ async fn example_with_concurrent_output_no_readline_async(
 /// Example showing how to update spinner messages dynamically.
 /// This demonstrates the new `update_message()` functionality.
 async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()> {
-    let rl_ctx = match ReadlineAsyncContext::try_new(Some("$ "), None).await {
-        TuiAvailability::Available(rl_ctx) => rl_ctx,
-        it => return it.into_err(),
-    };
+    let rl_ctx = ReadlineAsyncContext::try_new(Some("$ "), None).await?;
 
     let shared_writer = rl_ctx.clone_shared_writer();
 
     // Start spinner with initial message.
-    let mut maybe_spinner = match Spinner::try_start(
+    let mut maybe_spinner = Spinner::try_start(
         "Starting installation...",
         "Installation complete!",
         DELAY_UNIT,
@@ -202,10 +190,7 @@ async fn example_with_message_updates(style: SpinnerStyle) -> miette::Result<()>
         Some(shared_writer.clone()),
     )
     .await
-    {
-        TuiAvailability::Available(spinner) => Some(spinner),
-        _ => None,
-    };
+    .ok();
 
     if let Some(ref spinner) = maybe_spinner {
         // Simulate different phases of work with updated messages.

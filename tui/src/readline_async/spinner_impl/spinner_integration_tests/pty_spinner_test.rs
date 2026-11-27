@@ -18,7 +18,7 @@
 
 use crate::{DefaultIoDevices, MSG_CONTROLLED_READY, MSG_LINE_PREFIX, MSG_SUCCESS,
             PtyTestContext, PtyTestMode, SharedWriter, Spinner, SpinnerColor,
-            SpinnerStyle, SpinnerTemplate, TuiAvailability};
+            SpinnerStyle, SpinnerTemplate};
 use std::{io::Write, time::Duration};
 
 const QUANTUM: Duration = Duration::from_millis(100);
@@ -93,7 +93,7 @@ mod test_pty_spinner_color {
             )
             .await;
 
-            let TuiAvailability::Available(mut spinner) = res_maybe_spinner else {
+            let Ok(mut spinner) = res_maybe_spinner else {
                 panic!("Spinner should be available")
             };
 
@@ -181,7 +181,7 @@ mod test_pty_spinner_no_color {
             )
             .await;
 
-            let TuiAvailability::Available(mut spinner) = res_maybe_spinner else {
+            let Ok(mut spinner) = res_maybe_spinner else {
                 panic!("Spinner should be available")
             };
 
@@ -270,7 +270,7 @@ mod test_pty_spinner_message_update {
             )
             .await;
 
-            let TuiAvailability::Available(mut spinner) = res_maybe_spinner else {
+            let Ok(mut spinner) = res_maybe_spinner else {
                 panic!("Spinner should be available")
             };
 

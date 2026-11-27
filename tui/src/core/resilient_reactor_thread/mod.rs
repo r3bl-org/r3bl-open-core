@@ -1070,7 +1070,7 @@
 //! [`tokio`]: tokio
 //! [`try_subscribe()`]: RRT::try_subscribe
 //! [`tty`]: https://manpages.debian.org/tty.4
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 //! [`UDP`]: https://en.wikipedia.org/wiki/User_Datagram_Protocol
 //! [`W::Event`]: RRTWorker::Output
 //! [`Wayland`]: https://wayland.freedesktop.org/

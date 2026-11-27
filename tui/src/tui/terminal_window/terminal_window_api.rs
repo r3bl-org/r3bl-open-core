@@ -1,20 +1,48 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{BoxedSafeApp, GlobalData, try_main_event_loop_impl};
-use crate::{FlexBoxId, InputDevice, InputEvent, OutputDevice,
-            TerminalInteractiveStatus, TuiAvailability, check_is_terminal_interactive,
-            try_get_size};
+use crate::{FlexBoxId, InputDevice, InputEvent, OutputDevice, RawModeError,
+            TerminalIoError, TerminalNotInteractiveReason, TerminalSizeError,
+            try_ensure_terminal_interactive, try_get_size};
 use std::{fmt::{Debug, Display},
           pin::Pin};
 
 #[derive(Debug)]
 pub struct TerminalWindow;
 
+/// Errors that can occur while initializing or running [`TerminalWindow::try_main_event_loop`].
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum MainEventLoopError {
+    /// Terminal streams ([`stdin`] / [`stdout`]) are not interactive.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NotInteractive(TerminalNotInteractiveReason),
+
+    /// Failed to query the initial terminal window dimensions.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TerminalSize(TerminalSizeError),
+
+    /// Failed to enable terminal raw mode.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    RawMode(RawModeError),
+
+    /// Failed to enter full-screen alternate-screen TUI mode.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    FullScreenSetup(TerminalIoError),
+}
+
 /// Type alias for the pinned boxed future returned by the
-/// [`TerminalWindow::main_event_loop`] function.
+/// [`TerminalWindow::try_main_event_loop`] function.
 ///
-/// This represents a pinned boxed future that resolves to a [`miette::Result`] containing
-/// the main event loop's output: global data, input device, and output device.
+/// This represents a pinned boxed future that resolves to a [`Result`] containing
+/// the main event loop's output: global data, input device, and output device, or a
+/// [`MainEventLoopError`].
 ///
 /// See [Core Async Concepts] for more information on the async concepts used here.
 ///
@@ -22,11 +50,14 @@ pub struct TerminalWindow;
 pub type MainEventLoopFuture<S, AS> = Pin<
     Box<
         dyn Future<
-            Output = miette::Result<(
-                /* global_data */ GlobalData<S, AS>,
-                /* event stream */ InputDevice,
-                /* stdout */ OutputDevice,
-            )>,
+            Output = Result<
+                (
+                    /* global_data */ GlobalData<S, AS>,
+                    /* event stream */ InputDevice,
+                    /* stdout */ OutputDevice,
+                ),
+                MainEventLoopError,
+            >,
         >,
     >,
 >;
@@ -50,9 +81,8 @@ impl TerminalWindow {
     /// This is the public API, and not the internal API [`try_main_event_loop_impl()`].
     /// This separation exists to allow for testing using dependency injection.
     ///
-    /// This function handles the synchronous initialization (getting terminal size,
-    /// creating input/output devices) and then returns a [`MainEventLoopFuture`] that
-    /// contains the actual async event loop implementation.
+    /// Returns a [`MainEventLoopFuture`] that checks terminal interactivity, queries the
+    /// initial terminal size, creates input/output devices, and runs the async event loop.
     ///
     /// The main event loop is responsible for handling all input events, and dispatching
     /// them to the [`App`] for processing. It is also responsible for rendering the
@@ -68,14 +98,7 @@ impl TerminalWindow {
     ///
     /// # Returns
     ///
-    /// Returns a [`TuiAvailability`] containing the [`MainEventLoopFuture`] if the
-    /// terminal is interactive. This explicitly represents all possible states:
-    /// - [`Available`]: Terminal is interactive and initialization succeeded. Returns the
-    ///   future.
-    /// - [`NotAvailable`]: Terminal is not interactive.
-    /// - [`Broken`]: Initialization failed.
-    ///
-    /// The future resolves to a [`miette::Result`] with:
+    /// Returns a [`MainEventLoopFuture`] that resolves to `Ok(...)` with:
     /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
     /// * `event_stream` - The [`InputDevice`] used for input events.
     /// * [`stdout`] - The [`OutputDevice`] used for output.
@@ -109,61 +132,47 @@ impl TerminalWindow {
     ///
     /// # Errors
     ///
-    /// Returns a [`Broken`] variant containing a [`miette::Report`] if initialization
-    /// (e.g., getting terminal size) fails.
-    ///
-    /// The returned future may produce [`miette::Error`] during:
-    /// * Input/output device creation.
-    /// * Event loop execution (input processing, rendering, signal handling).
-    /// - Terminal cleanup and restoration.
+    /// The returned future resolves to [`MainEventLoopError`] if:
+    /// * Terminal streams are not interactive ([`MainEventLoopError::NotInteractive`]).
+    /// * Terminal dimensions cannot be queried ([`MainEventLoopError::TerminalSize`]).
+    /// * Terminal raw mode cannot be enabled ([`MainEventLoopError::RawMode`]).
+    /// * Full-screen TUI mode setup fails ([`MainEventLoopError::FullScreenSetup`]).
     ///
     /// # Other entry points for interactive terminal apps
     ///
     /// See [interactive terminal application entry points].
     ///
     /// [`App`]: crate::tui::App
-    /// [`Available`]: TuiAvailability::Available
-    /// [`Broken`]: TuiAvailability::Broken
-    /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
-    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`stdout`]: std::io::stdout
     /// [`try_main_event_loop_impl()`]: crate::try_main_event_loop_impl()
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
-    pub fn main_event_loop<S, AS>(
+    #[must_use]
+    pub fn try_main_event_loop<S, AS>(
         app: BoxedSafeApp<S, AS>,
         exit_keys: &[InputEvent],
         state: S,
-    ) -> TuiAvailability<MainEventLoopFuture<S, AS>>
+    ) -> MainEventLoopFuture<S, AS>
     where
         S: Display + Debug + Default + Clone + Sync + Send + 'static,
         AS: Debug + Default + Clone + Sync + Send + 'static,
     {
-        match check_is_terminal_interactive() {
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
-            }
+        let exit_keys = exit_keys.to_vec();
+        Box::pin(async move {
+            try_ensure_terminal_interactive()
+                .map_err(MainEventLoopError::NotInteractive)?;
+            let initial_size = try_get_size().map_err(MainEventLoopError::TerminalSize)?;
+            let input_device = InputDevice::default();
+            let output_device = OutputDevice::new_stdout();
 
-            TerminalInteractiveStatus::Available => {
-                let init = || -> miette::Result<MainEventLoopFuture<S, AS>> {
-                    let initial_size = try_get_size()?;
-                    let input_device = InputDevice::default();
-                    let output_device = OutputDevice::new_stdout();
-                    let exit_keys = exit_keys.to_vec();
-
-                    Ok(try_main_event_loop_impl(
-                        app,
-                        exit_keys,
-                        state,
-                        initial_size,
-                        input_device,
-                        output_device,
-                    ))
-                };
-                match init() {
-                    Ok(future) => TuiAvailability::Available(future),
-                    Err(e) => TuiAvailability::Broken(e),
-                }
-            }
-        }
+            try_main_event_loop_impl(
+                app,
+                exit_keys,
+                state,
+                initial_size,
+                input_device,
+                output_device,
+            )
+            .await
+        })
     }
 }

@@ -1,18 +1,13 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{AppMain, State};
-use r3bl_tui::{InputEvent, IntoErr, TerminalWindow, TuiAvailability, key_press, ok};
+use r3bl_tui::{InputEvent, TerminalWindow, key_press, ok};
 
 pub async fn run_app() -> miette::Result<()> {
     let app = AppMain::new_boxed();
     let exit_keys = &[InputEvent::Keyboard(key_press! { @char 'x' })];
 
-    match TerminalWindow::main_event_loop(app, exit_keys, State::default()) {
-        TuiAvailability::Available(future) => {
-            future.await?;
-        }
-        it => return it.into_err(),
-    }
+    TerminalWindow::try_main_event_loop(app, exit_keys, State::default()).await?;
 
     ok!()
 }

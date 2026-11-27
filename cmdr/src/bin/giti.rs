@@ -72,7 +72,7 @@ pub async fn launch_giti(cli_arg: CLIArg) {
         }
         // This branch is for strange errors like terminal not interactive.
         Err(error) => {
-            report_unrecoverable_errors(error).await;
+            report_unrecoverable_errors(error.into()).await;
         }
     }
 }

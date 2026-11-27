@@ -1,10 +1,9 @@
 // Copyright (c) 2023-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, ui_str},
+use crate::{giti::{BranchCheckoutDetails, CommandRunDetails, GitiBranchError, ui_str},
             prefix_single_select_instruction_header};
-use r3bl_tui::{BranchExists, CommandRunOutcome, CommandRunReport, DefaultIoDevices,
-               RepoStatus, TuiAvailabilityChooseExt, cli_text_inline, cli_text_line,
-               inline_vec,
+use r3bl_tui::{BranchExists, ChooseFutureExt, CommandRunOutcome, CommandRunReport,
+               DefaultIoDevices, RepoStatus, cli_text_inline, cli_text_line, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_checkout_existing_local_branch, try_choose,
                try_get_current_branch_name, try_get_local_branches,
@@ -14,13 +13,12 @@ use r3bl_tui::{BranchExists, CommandRunOutcome, CommandRunReport, DefaultIoDevic
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - Git operations fail (not a git repository, permission issues, etc.)
-/// - User interaction fails (terminal I/O issues)
-/// - Branch checkout fails (conflicts, invalid branch name, etc.)
+/// Returns [`GitiBranchError`] if:
+/// - Pre-flight git queries fail ([`GitiBranchError::Git`]).
+/// - Interactive branch selection fails ([`GitiBranchError::Choose`]).
 pub async fn try_handle_branch_checkout_command(
     maybe_branch_name: Option<String>,
-) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+) -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
     match maybe_branch_name {
         Some(ref branch_name) => {
             command_execute::try_checkout_branch_if_not_current(branch_name).await
@@ -51,8 +49,11 @@ mod command_execute {
 
     pub async fn try_checkout_branch_if_not_current(
         branch_name: &str,
-    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
-        let (_, branch_info) = try_get_local_branches().await.result?;
+    ) -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
+        let (_, branch_info) = try_get_local_branches()
+            .await
+            .result
+            .map_err(GitiBranchError::Git)?;
 
         // Early return if the branch does not exist locally.
         match branch_info.exists_locally(branch_name) {
@@ -69,7 +70,10 @@ mod command_execute {
         }
 
         // Early return if the branch_name is already checked out.
-        let current_branch = try_get_current_branch_name().await.result?;
+        let current_branch = try_get_current_branch_name()
+            .await
+            .result
+            .map_err(GitiBranchError::Git)?;
 
         if branch_name == current_branch.as_str() {
             let it = CommandRunReport::Noop(
@@ -92,39 +96,33 @@ mod command_execute {
             return Ok(it);
         }
 
-        try_checkout_branch(branch_name, &current_branch).await
+        Ok(checkout_branch(branch_name, &current_branch).await)
     }
 
-    pub async fn try_checkout_branch(
+    pub async fn checkout_branch(
         branch_name: &str,
         current_branch: &str,
-    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+    ) -> CommandRunReport<CommandRunDetails> {
         let CommandRunOutcome {
             result: res_output,
             command: cmd,
         } = try_checkout_existing_local_branch(branch_name).await;
         match res_output {
-            Ok(()) => {
-                let it = CommandRunReport::Run(
-                    ui_str::branch_checkout_display::info_checkout_success_msg(
-                        branch_name,
-                        current_branch,
-                    ),
-                    details::with_details(branch_name.into()),
-                    cmd,
-                );
-                Ok(it)
-            }
-            Err(err) => {
-                let it = CommandRunReport::Fail(
-                    ui_str::branch_checkout_display::error_failed_to_checkout_branch_msg(
-                        branch_name,
-                    ),
-                    cmd,
-                    err.into(),
-                );
-                Ok(it)
-            }
+            Ok(()) => CommandRunReport::Run(
+                ui_str::branch_checkout_display::info_checkout_success_msg(
+                    branch_name,
+                    current_branch,
+                ),
+                details::with_details(branch_name.into()),
+                cmd,
+            ),
+            Err(err) => CommandRunReport::Fail(
+                ui_str::branch_checkout_display::error_failed_to_checkout_branch_msg(
+                    branch_name,
+                ),
+                cmd,
+                err,
+            ),
         }
     }
 }
@@ -134,7 +132,7 @@ mod user_interaction {
     use super::*;
 
     pub async fn try_handle_branch_selection()
-    -> miette::Result<CommandRunReport<CommandRunDetails>> {
+    -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
         // Early return if the command fails.
         let Ok((_, branch_info)) = try_get_local_branches().await.result else {
             return Ok(noop());
@@ -163,8 +161,9 @@ mod user_interaction {
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .get_first_result()
-        .await?;
+        .try_get_first_choice()
+        .await
+        .map_err(GitiBranchError::Choose)?;
 
         // Early return if the user did not select a branch.
         let Some(user_choice) = maybe_user_choice else {
@@ -172,8 +171,10 @@ mod user_interaction {
         };
 
         // Actually checkout the user selected branch.
-        command_execute::try_checkout_branch(&user_choice, &branch_info.current_branch)
-            .await
+        Ok(
+            command_execute::checkout_branch(&user_choice, &branch_info.current_branch)
+                .await,
+        )
     }
 
     fn noop() -> CommandRunReport<CommandRunDetails> {

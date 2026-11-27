@@ -792,7 +792,7 @@ pub enum PtyError {
 /// [`tokio`]: tokio
 /// [`top`]: https://manpages.debian.org/top.1
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 /// [`vim`]: https://www.vim.org/
 /// [`WezTerm`]: https://wezfurlong.org/wezterm/
 /// [`WouldBlock`]: std::io::ErrorKind::WouldBlock

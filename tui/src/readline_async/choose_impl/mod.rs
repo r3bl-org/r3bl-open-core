@@ -14,7 +14,7 @@
 //! # use r3bl_tui::readline_async::*;
 //! # async fn example() -> miette::Result<()> {
 //! let mut io_devices = DefaultIoDevices::default();
-//! match try_choose(
+//! let _selection = try_choose(
 //!     "Select an item",
 //!     &["option 1", "option 2", "option 3"],
 //!     None,  // default height
@@ -22,12 +22,8 @@
 //!     HowToChoose::Single,
 //!     StyleSheet::default(),
 //!     io_devices.as_mut_tuple(),
-//! ) {
-//!     TuiAvailability::Available(choice_future) => {
-//!         let selection = choice_future.await?;
-//!     }
-//!     it => return it.into_err(),
-//! }
+//! )
+//! .await?;
 //! # ok!()
 //! # }
 //! ```

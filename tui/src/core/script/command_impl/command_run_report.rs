@@ -1,7 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{InlineString, InlineVec, TokioCommand, fg_lizard_green, fg_orange, fg_pink,
-            fg_slate_gray};
+use crate::{CommandRunError, InlineString, InlineVec, TokioCommand, fg_lizard_green,
+            fg_orange, fg_pink, fg_slate_gray};
 use std::{fmt::{Debug, Display, Error, Formatter},
           result::Result as StdResult};
 
@@ -37,7 +37,7 @@ pub enum CommandRunReport<T: Debug + Display> {
     Fail(
         /* error message */ InlineString,
         /* command */ TokioCommand,
-        /* error report */ miette::Report,
+        /* error */ CommandRunError,
     ),
 }
 

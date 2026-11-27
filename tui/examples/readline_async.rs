@@ -1,10 +1,10 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 #![allow(unused_imports)]
 use miette::{IntoDiagnostic, miette};
-use r3bl_tui::{ChannelCapacity, InlineVec, IntoErr, LineStateControlSignal, OsStringExt,
+use r3bl_tui::{ChannelCapacity, InlineVec, LineStateControlSignal, OsStringExt,
                OutputDevice, SendRawTerminal, SharedWriter, SpinnerStyle,
-               TuiAvailability, assert_terminal_is_interactive, bold, fg_color, fg_red,
-               fg_slate_gray, inline_string,
+               assert_terminal_is_interactive, bold, fg_color, fg_red, fg_slate_gray,
+               inline_string,
                log::{DisplayPreference, try_initialize_logging_global},
                ok,
                readline_async::{PrintLineOnControlC, PrintLineOnEnter, Readline,
@@ -150,10 +150,7 @@ async fn try_main_impl() -> miette::Result<()> {
         format!("{prompt_seg_1}{prompt_seg_2}")
     };
 
-    let mut rl_ctx = match ReadlineAsyncContext::try_new(Some(prompt), None).await {
-        TuiAvailability::Available(rl_ctx) => rl_ctx,
-        it => return it.into_err(),
-    };
+    let mut rl_ctx = ReadlineAsyncContext::try_new(Some(prompt), None).await?;
 
     // Pre-populate the readline's history with some entries.
     for command in Command::iter() {
@@ -422,22 +419,18 @@ mod long_running_task {
             let mut shared_writer_clone_2 = shared_writer.clone();
             async move {
                 // Try to create and start a spinner.
-                let res_spinner = Spinner::try_start(
-                format!("{task_name} - This is a sample indeterminate progress message"),
-                format!(
-                    "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
-                ),
-                Duration::from_millis(100),
-                SpinnerStyle::default(),
-                OutputDevice::default(),
-                Some(shared_writer_clone_1),
-            )
-            .await;
-
-                let mut maybe_spinner = match res_spinner {
-                    TuiAvailability::Available(spinner) => Some(spinner),
-                    _ => None,
-                };
+                let mut maybe_spinner = Spinner::try_start(
+                    format!("{task_name} - This is a sample indeterminate progress message"),
+                    format!(
+                        "{task_name} - Task ended. Resuming terminal and showing any output that was generated while spinner was active."
+                    ),
+                    Duration::from_millis(100),
+                    SpinnerStyle::default(),
+                    OutputDevice::default(),
+                    Some(shared_writer_clone_1),
+                )
+                .await
+                .ok();
 
                 loop {
                     // Check for spinner shutdown (via interruption).

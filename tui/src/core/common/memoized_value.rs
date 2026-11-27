@@ -4,7 +4,7 @@
 //!
 //! This module provides memoization structures to optimize expensive calculations
 //! in [`std::fmt::Display`] trait implementations, particularly for telemetry logging in
-//! the [`crate::TerminalWindow::main_event_loop`].
+//! the [`crate::TerminalWindow::try_main_event_loop`].
 //!
 //! The memory size related types have been moved to [`crate::GetMemSize`] module
 //! to consolidate memory size calculation and caching logic.

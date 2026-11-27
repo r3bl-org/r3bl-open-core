@@ -4,10 +4,9 @@ use crate::{ChannelCapacity, CursorPositionBoundsStatus, GCStringOwned, InputDev
             LineStateControlSignal, ModalTerminalGuard, OutputDevice,
             READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY, Readline,
             ReadlineError, ReadlineEvent, SegIndex, SharedWriter,
-            TerminalInteractiveStatus, TuiAvailability, check_is_terminal_interactive,
-            emit_stderr_redirection_disclaimer, try_get_size};
+            emit_stderr_redirection_disclaimer, try_ensure_terminal_interactive,
+            try_get_size};
 use futures_util::FutureExt;
-use miette::IntoDiagnostic;
 use tokio::sync::broadcast;
 
 /// This is the context for the readline async API. It contains the [`Readline`] instance,
@@ -121,19 +120,17 @@ impl ReadlineAsyncContext {
     ///
     /// # Returns
     ///
-    /// Returns a [`TuiAvailability`] containing the [`ReadlineAsyncContext`] if the
-    /// terminal is interactive (checked via [`check_is_terminal_interactive()`]). This
-    /// explicitly represents all possible states:
-    /// - [`Available`]: Terminal is interactive and initialization succeeded.
-    /// - [`NotAvailable`]: Terminal is not interactive (e.g., piped input/output).
-    /// - [`Broken`]: Initialization failed.
+    /// Returns `Ok(ReadlineAsyncContext)` if the terminal is interactive and
+    /// initialization succeeds.
     ///
     /// # Errors
     ///
-    /// Returns a [`Broken`] variant containing a [`miette::Report`] if:
+    /// Returns [`ReadlineError`] if:
+    /// - Terminal streams are not interactive ([`ReadlineError::NotInteractive`]).
     /// - Terminal size cannot be determined via [`try_get_size()`]
-    /// - The terminal cannot be put into [raw mode]
-    /// - The readline instance cannot be created
+    ///   ([`ReadlineError::TerminalSize`]).
+    /// - The terminal cannot be put into [raw mode] ([`ReadlineError::RawMode`]).
+    /// - Terminal control operations fail ([`ReadlineError::TerminalIo`]).
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
@@ -149,12 +146,8 @@ impl ReadlineAsyncContext {
     /// See [interactive terminal application entry points].
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`Available`]: TuiAvailability::Available
-    /// [`Broken`]: TuiAvailability::Broken
-    /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
     /// [`emit_stderr_redirection_disclaimer()`]:
     ///     crate::emit_stderr_redirection_disclaimer
-    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`stderr`]: std::io::stderr
     /// [`try_get_size()`]: crate::try_get_size
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
@@ -162,60 +155,43 @@ impl ReadlineAsyncContext {
     pub async fn try_new(
         read_line_prompt: Option<impl AsRef<str>>,
         channel_capacity: Option<ChannelCapacity>,
-    ) -> TuiAvailability<ReadlineAsyncContext> {
-        match check_is_terminal_interactive() {
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
-            }
+    ) -> Result<ReadlineAsyncContext, ReadlineError> {
+        try_ensure_terminal_interactive().map_err(ReadlineError::NotInteractive)?;
+        emit_stderr_redirection_disclaimer();
 
-            TerminalInteractiveStatus::Available => {
-                let init = async || {
-                    emit_stderr_redirection_disclaimer();
+        let initial_size = try_get_size().map_err(ReadlineError::TerminalSize)?;
+        let output_device = OutputDevice::new_stdout();
+        let input_device = InputDevice::default();
 
-                    let initial_size = try_get_size()?;
-                    let output_device = OutputDevice::new_stdout();
-                    let input_device = InputDevice::default();
+        let prompt = match read_line_prompt {
+            Some(ref p) => p.as_ref().to_string(),
+            None => "> ".to_owned(),
+        };
 
-                    let prompt = match read_line_prompt {
-                        Some(ref p) => p.as_ref().to_string(),
-                        None => "> ".to_owned(),
-                    };
+        // Use the provided channel capacity or default to VeryLarge.
+        let capacity = channel_capacity.unwrap_or_default();
 
-                    // Use the provided channel capacity or default to VeryLarge.
-                    let capacity = channel_capacity.unwrap_or_default();
+        // Create a channel to signal when shutdown is complete.
+        let shutdown_complete_channel = broadcast::channel::<()>(1);
+        let (shutdown_complete_sender, _) = shutdown_complete_channel;
 
-                    // Create a channel to signal when shutdown is complete.
-                    let shutdown_complete_channel = broadcast::channel::<()>(1);
-                    let (shutdown_complete_sender, _) = shutdown_complete_channel;
+        let (readline, stdout) = Readline::try_new(
+            prompt,
+            output_device,
+            input_device,
+            shutdown_complete_sender.clone(),
+            capacity,
+            initial_size,
+        )?;
 
-                    let (readline, stdout) = Readline::try_new(
-                        prompt.clone(),
-                        output_device,
-                        input_device,
-                        shutdown_complete_sender.clone(),
-                        capacity,
-                        initial_size,
-                    )
-                    .into_diagnostic()?;
+        // Sleep for READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY.
+        tokio::time::sleep(READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY).await;
 
-                    // Sleep for READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY.
-                    tokio::time::sleep(
-                        READLINE_ASYNC_INITIAL_PROMPT_DISPLAY_CURSOR_SHOW_DELAY,
-                    )
-                    .await;
-
-                    Ok(ReadlineAsyncContext {
-                        readline,
-                        shared_writer: stdout,
-                        shutdown_complete_sender,
-                    })
-                };
-                match init().await {
-                    Ok(ctx) => TuiAvailability::Available(ctx),
-                    Err(e) => TuiAvailability::Broken(e),
-                }
-            }
-        }
+        Ok(ReadlineAsyncContext {
+            readline,
+            shared_writer: stdout,
+            shutdown_complete_sender,
+        })
     }
 
     #[must_use]

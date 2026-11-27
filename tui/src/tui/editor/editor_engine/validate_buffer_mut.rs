@@ -164,7 +164,7 @@ mod editor_buffer_mut_with_drop_impl_block {
         ///    [`perform_validation_checks_after_mutation`].
         ///
         /// [`Display`]: std::fmt::Display
-        /// [`main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
+        /// [`main_event_loop`]: crate::tui::TerminalWindow::try_main_event_loop
         /// [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
         /// [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
         fn drop(&mut self) {

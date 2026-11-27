@@ -76,7 +76,7 @@ use tokio::sync::broadcast::Receiver;
 /// [`Stopping`]: super::ThreadState::Stopping
 /// [`ThreadLifecycleMonitor::interrupt_if_running()`]:
 ///     super::ThreadLifecycleMonitor::interrupt_if_running
-/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 /// [broadcast channel]: tokio::sync::broadcast
 /// [RAII]: https://en.wikipedia.org/wiki/Resource_acquisition_is_initialization
 /// [RFC 1857]: https://rust-lang.github.io/rfcs/1857-stabilize-drop-order.html

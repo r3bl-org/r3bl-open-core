@@ -1,6 +1,7 @@
 // Copyright (c) 2024-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::{KeyPress, RawModeError, TerminalIoError, VPSize};
+use crate::{KeyPress, RawModeError, TerminalIoError, TerminalNotInteractiveReason,
+            TerminalSizeError, VPSize};
 use std::{io, num::NonZeroU8, time::Duration};
 use thiserror::Error;
 
@@ -95,13 +96,25 @@ impl<T, E> From<Result<Option<T>, E>> for ReadlineControlFlow<T, E> {
 /// # High-Fidelity Diagnostics
 ///
 /// This type implements [`miette::Diagnostic`], which allows for high-fidelity error
-/// reporting with help text and error codes. Use [`.into_diagnostic()`] to convert this
-/// into a [`miette::Report`].
+/// reporting with help text and error codes, and converts automatically into
+/// [`miette::Report`] via `?` at binary `main()` entry points.
 ///
-/// [`.into_diagnostic()`]: miette::IntoDiagnostic::into_diagnostic
 /// [`try_readline()`]: crate::Readline::try_readline
 #[derive(Debug, Error, miette::Diagnostic)]
 pub enum ReadlineError {
+    /// Terminal streams ([`stdin`] / [`stdout`]) are not interactive.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NotInteractive(TerminalNotInteractiveReason),
+
+    /// Failed to query the initial terminal window dimensions.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TerminalSize(TerminalSizeError),
+
     /// An internal I/O error occurred.
     #[error(transparent)]
     IO(io::Error),

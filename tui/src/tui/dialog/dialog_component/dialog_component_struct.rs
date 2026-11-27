@@ -93,7 +93,7 @@ where
     /// [DialogEngineApi::apply_event] w/ all the necessary
     /// arguments:
     /// - Global scope: [`GlobalData`] containing the app's state.
-    /// - User input (from [`TerminalWindow::main_event_loop`]): [`InputEvent`].
+    /// - User input (from [`TerminalWindow::try_main_event_loop`]): [`InputEvent`].
     /// - Has focus: [`HasFocus`] containing whether the current box has focus.
     ///
     /// Usually a component must have focus in order for the [`crate::App`] to
@@ -101,7 +101,7 @@ where
     /// in the first place.
     ///
     /// [`route_event_to_focused_component`]: crate::ComponentRegistry::route_event_to_focused_component
-    /// [`TerminalWindow::main_event_loop`]: crate::TerminalWindow::main_event_loop
+    /// [`TerminalWindow::try_main_event_loop`]: crate::TerminalWindow::try_main_event_loop
     /// [DialogEngineApi::apply_event]: DialogEngineApi::apply_event
     fn handle_event(
         &mut self,

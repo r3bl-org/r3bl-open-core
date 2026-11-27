@@ -1,7 +1,7 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::{super::{toolchain_bin, toolchain_cli_args, upgrade_rustup_progress}, ui_strings};
-use r3bl_tui::{OscPtyEvent, OutputDevice, Spinner, SpinnerStyle, TuiAvailability,
+use r3bl_tui::{OscPtyEvent, OutputDevice, Spinner, SpinnerStyle,
             core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                         PtySessionConfigToken}};
 use std::{io::{Error, ErrorKind},
@@ -42,10 +42,7 @@ pub async fn run_source_build_with_spinner(
     )
     .await;
 
-    let mut maybe_spinner = match res_spinner {
-        TuiAvailability::Available(spinner) => Some(spinner),
-        _ => None,
-    };
+    let mut maybe_spinner = res_spinner.ok();
 
     if use_rustup {
         let res_rustup_update =

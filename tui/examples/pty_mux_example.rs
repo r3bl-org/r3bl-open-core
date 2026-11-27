@@ -53,10 +53,9 @@
 //! [`SIGWINCH`]: signal_hook::consts::SIGWINCH
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
 
-use r3bl_tui::{DefaultIoDevices, EventPropagation, InputEvent, IntoErr, Key, KeyPress,
-               KeyState, ModifierKeysMask, PTYMux, ProcessManager, TuiAvailability,
-               TuiAvailabilityChooseExt, assert_terminal_is_interactive,
-               is_command_available, ok,
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, EventPropagation, InputEvent, Key,
+               KeyPress, KeyState, ModifierKeysMask, PTYMux, ProcessManager,
+               assert_terminal_is_interactive, is_command_available, ok,
                readline_async::{HowToChoose, StyleSheet},
                run_in_main_with_safe_stack, show_notification_non_blocking, try_choose,
                try_initialize_logging_global};
@@ -115,7 +114,7 @@ async fn try_main_impl() -> miette::Result<()> {
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .get_first_result()
+        .try_get_first_choice()
         .await?
     };
 
@@ -147,10 +146,7 @@ async fn try_main_impl() -> miette::Result<()> {
 
     builder = builder.input_interceptor_fn(Box::new(interceptor_fn));
 
-    let multiplexer = match builder.build() {
-        TuiAvailability::Available(mux) => mux,
-        it => return it.into_err(),
-    };
+    let multiplexer = builder.try_build()?;
 
     println!("🛫 Starting multiplexer event loop...");
     println!("   (All processes will be started immediately for fast switching)");

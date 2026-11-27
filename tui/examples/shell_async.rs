@@ -83,8 +83,8 @@
 //! [YouTube channel]: https://www.youtube.com/@developerlifecom?sub_confirmation=1
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{SharedWriter, TuiAvailability, assert_terminal_is_interactive,
-               fg_guards_red, fg_lizard_green, fg_slate_gray, inline_string, ok,
+use r3bl_tui::{SharedWriter, assert_terminal_is_interactive, fg_guards_red,
+               fg_lizard_green, fg_slate_gray, inline_string, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent,
                                 ReadlineEvent::{BackTab, Eof, FnKey, Insert,
                                                 Interrupted, Line, PageDown, PageUp,
@@ -287,9 +287,7 @@ pub mod monitor_child_output {
 }
 
 pub mod terminal_async_constructor {
-    use super::{ReadlineAsyncContext, SharedWriter, TuiAvailability, fg_slate_gray,
-                inline_string, ok};
-    use r3bl_tui::IntoErr;
+    use super::{ReadlineAsyncContext, SharedWriter, fg_slate_gray, inline_string, ok};
 
     #[allow(missing_debug_implementations)]
     pub struct TerminalAsyncHandle {
@@ -310,10 +308,7 @@ pub mod terminal_async_constructor {
             format!("{prompt_seg_1}{prompt_seg_2}")
         };
 
-        let rl_ctx = match ReadlineAsyncContext::try_new(Some(prompt), None).await {
-            TuiAvailability::Available(rl_ctx) => rl_ctx,
-            it => return it.into_err(),
-        };
+        let rl_ctx = ReadlineAsyncContext::try_new(Some(prompt), None).await?;
 
         let shared_writer = rl_ctx.clone_shared_writer();
 

@@ -18,9 +18,8 @@ mod ex_rc;
 
 // Use other crates.
 // Re-export items for sub-modules that use `crate::` imports.
-use r3bl_tui::{DEBUG_TUI, IntoErr, TuiAvailability, VPSize,
-               assert_terminal_is_interactive, fg_color, fg_frozen_blue, fg_pink,
-               fg_slate_gray, inline_string,
+use r3bl_tui::{DEBUG_TUI, VPSize, assert_terminal_is_interactive, fg_color,
+               fg_frozen_blue, fg_pink, fg_slate_gray, inline_string,
                log::try_initialize_logging_global,
                ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
@@ -70,7 +69,7 @@ async fn try_main_impl() -> miette::Result<()> {
 
         // Create a fresh ReadlineAsyncContext each iteration.
         // This ensures no stale InputDevice state persists across example runs.
-        let mut rl_ctx = match ReadlineAsyncContext::try_new(
+        let mut rl_ctx = ReadlineAsyncContext::try_new(
             {
                 // Generate prompt.
                 let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
@@ -79,11 +78,7 @@ async fn try_main_impl() -> miette::Result<()> {
             },
             None, // Use default channel capacity
         )
-        .await
-        {
-            TuiAvailability::Available(rl_ctx) => rl_ctx,
-            it => return it.into_err(),
-        };
+        .await?;
 
         // Pre-populate the readline's history with static command entries.
         for command in AutoCompleteCommand::iter() {

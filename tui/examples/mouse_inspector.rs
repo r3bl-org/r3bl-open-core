@@ -44,10 +44,10 @@
 //! [`OutputDevice`]: r3bl_tui::OutputDevice
 //! [`RawMode`]: r3bl_tui::RawMode
 
-use r3bl_tui::{DefaultIoDevices, InputDevice, InputEvent, Key, KeyPress, KeyState,
-               ModifierKeysMask, MouseInput, MouseInputKind, NarrowingCastToU16,
-               OutputDevice, PaintMode, TermCol, TermRow, TerminalModeController,
-               TuiAvailabilityChooseExt, VPPos, ansi_output,
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, InputDevice, InputEvent, Key,
+               KeyPress, KeyState, ModifierKeysMask, MouseInput, MouseInputKind,
+               NarrowingCastToU16, OutputDevice, PaintMode, TermCol, TermRow,
+               TerminalModeController, VPPos, ansi_output,
                assert_terminal_is_interactive, ok,
                readline_async::{HowToChoose, StyleSheet},
                run_in_main_with_safe_stack, try_choose, vp_col, vp_row};
@@ -256,7 +256,7 @@ async fn try_main_impl() -> miette::Result<()> {
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .get_first_result()
+        .try_get_first_choice()
         .await?
     };
 

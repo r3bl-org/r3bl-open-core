@@ -2,14 +2,28 @@
 
 use crate::{InlineString, LineStateControlSignal, OutputDevice, SafeBool,
             SafeInlineString, SharedWriter, SpinnerStyle, StdMutex,
-            TerminalInteractiveStatus, TuiAvailability, check_is_terminal_interactive,
-            contains_ansi_escape_sequence, emit_stderr_redirection_disclaimer,
-            get_terminal_width, render_final_tick, render_tick,
-            try_print_start_if_standalone, try_print_tick_final_msg,
-            try_print_tick_interval_msg};
-use miette::IntoDiagnostic;
+            TerminalNotInteractiveReason, contains_ansi_escape_sequence,
+            emit_stderr_redirection_disclaimer, get_terminal_width, render_final_tick,
+            render_tick, try_ensure_terminal_interactive, try_print_start_if_standalone,
+            try_print_tick_final_msg, try_print_tick_interval_msg};
 use std::{io, sync::Arc, time::Duration};
 use tokio::{sync::broadcast, time::interval};
+
+/// Errors that can occur when starting a [`Spinner`] via [`Spinner::try_start`].
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum SpinnerError {
+    /// Terminal streams ([`stdin`] / [`stdout`]) are not interactive.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NotInteractive(TerminalNotInteractiveReason),
+
+    /// Failed to start the background spinner task or write initial output.
+    #[error("Failed to start spinner task")]
+    Io(#[source] std::io::Error),
+}
 
 /// [`Spinner`] is an [interactive terminal application entry point] that displays an
 /// indeterminate spinner for long-running tasks. It only checks [`stdout`] interactivity
@@ -54,9 +68,9 @@ use tokio::{sync::broadcast, time::interval};
 /// ```no_run
 /// // This example requires terminal output for the spinner animation
 /// use std::time::Duration;
-/// use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner, IntoErr, TuiAvailability};
+/// use r3bl_tui::{ok, SpinnerStyle, OutputDevice, Spinner};
 /// async fn example() -> miette::Result<()> {
-///     let mut spinner = match Spinner::try_start(
+///     let mut spinner = Spinner::try_start(
 ///         "Loading...",
 ///         "Done!",
 ///         Duration::from_millis(100),
@@ -64,10 +78,7 @@ use tokio::{sync::broadcast, time::interval};
 ///         OutputDevice::default(),
 ///         None,
 ///     )
-///     .await {
-///         TuiAvailability::Available(spinner) => spinner,
-///         it => return it.into_err(),
-///     };
+///     .await?;
 ///
 ///     // Some work happens here...
 ///
@@ -151,13 +162,8 @@ impl Spinner {
     ///
     /// # Returns
     ///
-    /// Returns a [`TuiAvailability`] containing the [`Spinner`] if the terminal is
-    /// interactive. This explicitly represents all possible states:
-    /// - [`Available`]: Terminal is interactive and the spinner task started
-    ///   successfully.
-    /// - [`NotAvailable`]: Terminal is not interactive (e.g., piped output), and won't
-    ///   start the task.
-    /// - [`Broken`]: Initialization failed.
+    /// Returns `Ok(Spinner)` if the terminal is interactive and the background spinner
+    /// task started successfully.
     ///
     /// More info on terminal piping:
     /// - <https://unix.stackexchange.com/questions/597083/how-does-piping-affect-stdin>
@@ -170,19 +176,17 @@ impl Spinner {
     ///
     /// # Errors
     ///
-    /// Returns a [`Broken`] variant containing a [`miette::Report`] if:
-    /// - The spinner task cannot be started
-    /// - The communication channels fail to initialize
+    /// Returns [`SpinnerError`] if:
+    /// - Terminal streams are not interactive ([`SpinnerError::NotInteractive`]).
+    /// - Starting the background spinner task or writing initial terminal output fails
+    ///   ([`SpinnerError::Io`]).
     ///
     /// # Other entry points for interactive terminal apps
     ///
     /// See [interactive terminal application entry points].
     ///
     /// [`ANSI`]: https://en.wikipedia.org/wiki/ANSI_escape_code
-    /// [`Available`]: TuiAvailability::Available
-    /// [`Broken`]: TuiAvailability::Broken
     /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
-    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`stderr`]: std::io::stderr
     /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
     pub async fn try_start(
@@ -192,62 +196,50 @@ impl Spinner {
         style: SpinnerStyle,
         output_device: OutputDevice,
         maybe_shared_writer: Option<SharedWriter>,
-    ) -> TuiAvailability<Spinner> {
-        match check_is_terminal_interactive() {
-            TerminalInteractiveStatus::NotAvailable(reason) => {
-                TuiAvailability::NotAvailable(reason)
+    ) -> Result<Spinner, SpinnerError> {
+        try_ensure_terminal_interactive().map_err(SpinnerError::NotInteractive)?;
+        emit_stderr_redirection_disclaimer();
+
+        // Make sure no ANSI escape sequences are in the message.
+        let interval_msg = {
+            let msg = arg_interval_msg.as_ref();
+            if contains_ansi_escape_sequence(msg) {
+                strip_ansi_escapes::strip_str(msg)
+            } else {
+                msg.to_string()
             }
-            TerminalInteractiveStatus::Available => {
-                let init = async || {
-                    emit_stderr_redirection_disclaimer();
+        };
 
-                    // Make sure no ANSI escape sequences are in the message.
-                    let interval_msg = {
-                        let msg = arg_interval_msg.as_ref();
-                        if contains_ansi_escape_sequence(msg) {
-                            strip_ansi_escapes::strip_str(msg)
-                        } else {
-                            msg.to_string()
-                        }
-                    };
-
-                    // Make sure no ANSI escape sequences are in the final_message.
-                    let final_msg = {
-                        let msg = arg_final_msg.as_ref();
-                        if contains_ansi_escape_sequence(msg) {
-                            strip_ansi_escapes::strip_str(msg)
-                        } else {
-                            msg.to_string()
-                        }
-                    };
-
-                    // Shutdown broadcast channel.
-                    let (shutdown_sender, _) = broadcast::channel::<()>(1);
-
-                    // Only start the task if the terminal is fully interactive.
-                    let mut spinner = Spinner {
-                        interval_message: Arc::new(StdMutex::new(interval_msg.into())),
-                        final_message: final_msg.into(),
-                        tick_delay,
-                        style,
-                        output_device,
-                        maybe_shared_writer,
-                        shutdown_sender,
-                        safe_is_shutdown: Arc::new(StdMutex::new(false)),
-                        maybe_shutdown_complete_rx: None,
-                    };
-
-                    // Start task.
-                    spinner.try_start_task().await.into_diagnostic()?;
-
-                    Ok::<_, miette::Report>(spinner)
-                };
-                match init().await {
-                    Ok(spinner) => TuiAvailability::Available(spinner),
-                    Err(e) => TuiAvailability::Broken(e),
-                }
+        // Make sure no ANSI escape sequences are in the final_message.
+        let final_msg = {
+            let msg = arg_final_msg.as_ref();
+            if contains_ansi_escape_sequence(msg) {
+                strip_ansi_escapes::strip_str(msg)
+            } else {
+                msg.to_string()
             }
-        }
+        };
+
+        // Shutdown broadcast channel.
+        let (shutdown_sender, _) = broadcast::channel::<()>(1);
+
+        // Only start the task if the terminal is fully interactive.
+        let mut spinner = Spinner {
+            interval_message: Arc::new(StdMutex::new(interval_msg.into())),
+            final_message: final_msg.into(),
+            tick_delay,
+            style,
+            output_device,
+            maybe_shared_writer,
+            shutdown_sender,
+            safe_is_shutdown: Arc::new(StdMutex::new(false)),
+            maybe_shutdown_complete_rx: None,
+        };
+
+        // Start task.
+        spinner.try_start_task().await.map_err(SpinnerError::Io)?;
+
+        Ok(spinner)
     }
 
     /// This is meant for the task that spawned this [Spinner] to check if it should
@@ -626,7 +618,7 @@ mod tests {
         let (output_device, _) = OutputDevice::new_mock();
         // In unit test environment without a real terminal, try_start returns
         // NotAvailable or Available.
-        let availability = Spinner::try_start(
+        let res_spinner = Spinner::try_start(
             "test",
             "done",
             Duration::from_millis(50),
@@ -636,16 +628,16 @@ mod tests {
         )
         .await;
 
-        match availability {
-            TuiAvailability::NotAvailable(reason) => {
+        match res_spinner {
+            Err(SpinnerError::NotInteractive(reason)) => {
                 assert!(!reason.as_err_msg().is_empty());
             }
-            TuiAvailability::Available(mut spinner) => {
+            Ok(mut spinner) => {
                 spinner.request_shutdown();
                 spinner.await_shutdown().await;
             }
-            TuiAvailability::Broken(err) => {
-                panic!("try_start should not fail with Broken error: {err:?}");
+            Err(err @ SpinnerError::Io(_)) => {
+                panic!("try_start should not fail with Io error: {err:?}");
             }
         }
     }

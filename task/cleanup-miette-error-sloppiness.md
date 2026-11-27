@@ -96,14 +96,16 @@ Per `.agents/skills/design-philosophy/SKILL.md` (Principle #3 and Principle #5):
 
 `miette::Result<T>` and `miette::Report` remain strictly at these intentional boundaries:
 
-1. **Binary process entry points, examples, and tests:** `cmdr/src/bin/{edi,giti,env-source}.rs`,
-   `build-infra/src/bin/cargo-rustdoc-fmt.rs`, `rust-analyzer-mcp-server/src/main.rs`,
-   `tui/examples/**/*.rs`, and `#[test]` functions.
-2. **Dyn-compatible heterogeneous TUI plugin traits:** `App` (`app.rs`), `Component<S, AS>`
-   and `SurfaceRender<S, AS>` (`component.rs`),
+1. **Binary process entry points, examples, and tests:**
+   `cmdr/src/bin/{edi,giti,env-source}.rs`, `build-infra/src/bin/cargo-rustdoc-fmt.rs`,
+   `rust-analyzer-mcp-server/src/main.rs`, `tui/examples/**/*.rs`, and `#[test]`
+   functions.
+2. **Dyn-compatible heterogeneous TUI plugin traits:** `App` (`app.rs`),
+   `Component<S, AS>` and `SurfaceRender<S, AS>` (`component.rs`),
    `ComponentRegistry::route_event_to_focused_component` (`component_registry.rs`), plus
-   `EditorComponent` and `DialogComponent` trait implementations (whose per-frame errors are
-   caught and logged inside `main_event_loop.rs` and never escape `MainEventLoopFuture`).
+   `EditorComponent` and `DialogComponent` trait implementations (whose per-frame errors
+   are caught and logged inside `main_event_loop.rs` and never escape
+   `MainEventLoopFuture`).
 
 ### Architecture Overview
 
@@ -1325,10 +1327,11 @@ unmistakable instead of hidden behind an innocent-looking `CommonResult` alias.
 ### Phase 12: Eliminate Remaining Premature `miette::Result` / `miette::Report` (`TuiAvailability`, `giti`, `edi`)
 
 Eliminate the remaining premature `miette::Result` / `miette::Report` conversions in
-`r3bl_tui` and `cmdr/src/*` so concrete `#[derive(Debug, thiserror::Error, miette::Diagnostic)]`
-errors are preserved all the way up to `src/bin/*.rs` (`main()`), leaving `miette::Result`
-strictly at binary entry points, examples/tests, and `dyn`-compatible TUI plugin traits
-(`App`, `Component`, `SurfaceRender`).
+`r3bl_tui` and `cmdr/src/*` so concrete
+`#[derive(Debug, thiserror::Error, miette::Diagnostic)]` errors are preserved all the way
+up to `src/bin/*.rs` (`main()`), leaving `miette::Result` strictly at binary entry points,
+examples/tests, and `dyn`-compatible TUI plugin traits (`App`, `Component`,
+`SurfaceRender`).
 
 #### Sub-phase 12.1: Replace `TuiAvailability<T>` & `IntoErr` with Typed `Result<T, E>` in `r3bl_tui`
 
@@ -1503,22 +1506,23 @@ pub enum CommandRunReport<T: Debug + Display> {
 }
 ```
 
-- [ ] Delete `tui/src/core/common/into_err.rs`, remove `mod into_err` / `pub use into_err::*`
-      from `tui/src/core/common/mod.rs`, delete `TuiAvailability<T>` from
-      `capabilities_public_api.rs`, and add `try_ensure_terminal_interactive()`.
-- [ ] Update `TerminalWindow` (`try_main_event_loop` + `MainEventLoopError`), `try_choose`
+- [x] Delete `tui/src/core/common/into_err.rs`, remove `mod into_err` /
+      `pub use into_err::*` from `tui/src/core/common/mod.rs`, delete `TuiAvailability<T>`
+      from `capabilities_public_api.rs`, and add `try_ensure_terminal_interactive()`.
+- [x] Update `TerminalWindow` (`try_main_event_loop` + `MainEventLoopError`), `try_choose`
       (`ChooseError` + `ChooseFutureExt::{try_get_first_choice, try_get_all_choices}`),
       `ReadlineAsyncContext::try_new` (`ReadlineError`), `Spinner::try_start`
       (`SpinnerError`), `PTYMuxBuilder::try_build` (`PtyMuxError`), and
       `CommandRunReport::Fail(..., CommandRunError)`.
-- [ ] Update all `tui/src/` integration tests, rustdoc examples (`tui/src/lib.rs`,
+- [x] Update all `tui/src/` integration tests, rustdoc examples (`tui/src/lib.rs`,
       `pty_mux/mod.rs`, `readline_async/mod.rs`, `choose_impl/mod.rs`, `history.rs`), and
       `tui/examples/**/*.rs` call sites.
 
 #### Sub-phase 12.2: Pure Typed Errors Across `cmdr` (`giti` & `edi`) Up to `src/bin/*.rs`
 
 Propagate concrete typed errors across `cmdr/src/giti/*` and `cmdr/src/edi/*` so
-`miette::Report` conversion occurs strictly inside `cmdr/src/bin/{giti,edi,env-source}.rs`:
+`miette::Report` conversion occurs strictly inside
+`cmdr/src/bin/{giti,edi,env-source}.rs`:
 
 ```rust
 // cmdr/src/giti/branch/branch_command.rs (re-exported from cmdr/src/giti/branch/mod.rs)
@@ -1575,25 +1579,29 @@ pub async fn try_run_app(
 ) -> Result<(), MainEventLoopError>;
 ```
 
-- [ ] Define `GitiBranchError`, migrate all `cmdr/src/giti/branch/*` functions to
+- [x] Define `GitiBranchError`, migrate all `cmdr/src/giti/branch/*` functions to
       `Result<..., GitiBranchError>`, drop fake `Result` from infallible `checkout_branch`
       and `delete_selected_branches`, pass `CommandRunError` directly into
       `CommandRunReport::Fail`, and convert `GitiBranchError -> miette::Report` solely in
       `cmdr/src/bin/giti.rs`.
-- [ ] Update `cmdr/src/edi/app_main.rs` (`try_create_stylesheet -> Result<TuiStylesheet, StylesheetError>`),
+- [x] Update `cmdr/src/edi/app_main.rs`
+      (`try_create_stylesheet -> Result<TuiStylesheet, StylesheetError>`),
       `cmdr/src/edi/launcher.rs` (`try_run_app -> Result<(), MainEventLoopError>`), and
       `cmdr/src/bin/edi.rs` (sole `?` conversion to `miette::Result<()>`), plus update
       `ChooseFutureExt` / `Spinner::try_start` call sites in `edi/ui_templates.rs`,
-      `analytics_client/upgrade_check.rs`, and `self_upgrade/upgrade/{prompt,build,perform_upgrade}.rs`.
-- [ ] Run `./check.fish --check` and verify zero `miette::Result` / `miette::Report`
-      usages remain in `cmdr/src/` (outside `cmdr/src/bin/` and `dyn App` / `SurfaceRender`
-      trait impls) or `tui/src/` (outside `dyn App` / `Component` / `SurfaceRender` traits,
-      doctests, and `#[test]`s).
+      `analytics_client/upgrade_check.rs`, and
+      `self_upgrade/upgrade/{prompt,build,perform_upgrade}.rs`.
+- [x] Run `./check.fish --check` and verify zero `miette::Result` / `miette::Report`
+      usages remain in `cmdr/src/` (outside `cmdr/src/bin/` and `dyn App` /
+      `SurfaceRender` trait impls) or `tui/src/` (outside `dyn App` / `Component` /
+      `SurfaceRender` traits, doctests, and `#[test]`s).
 
 ### Mandatory Manual Review
 
 Verify every file modified across Phases 1 through 12 for correct implementation,
 preserved rustdoc comments, and zero regressions.
+
+#### Batch 1
 
 - [ ] **Mandatory manual review:** Complete manual review of all modified files.
     - [x] `build-infra/src/bin/cargo-rustdoc-fmt.rs`
@@ -1645,7 +1653,8 @@ preserved rustdoc comments, and zero regressions.
     - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_line_ops.rs`
     - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/ops_impl_ofs_buf/vt_100_impl_scroll_ops.rs`
     - [ ] `tui/src/core/ansi/vt_100_pty_output_parser/test_fixtures_ofs_buf_vt_100.rs`
-    - [ ] `tui/src/core/common/into_err.rs`
+    - [ ] `tui/src/core/common/into_err.rs` _(deleted in Phase 12; was
+          `common_result_and_error.rs`)_
     - [ ] `tui/src/core/log/log_public_api.rs`
     - [ ] `tui/src/core/log/rolling_file_appender_impl.rs`
     - [ ] `tui/src/core/log/tracing_config.rs`
@@ -1745,6 +1754,9 @@ preserved rustdoc comments, and zero regressions.
     - [ ] `tui/src/tui/terminal_window/main_event_loop.rs`
     - [ ] `tui/src/tui/terminal_window/manage_focus/has_focus.rs`
     - [ ] `tui/src/tui/terminal_window/shared_global_data.rs`
+
+#### Batch 2
+
 - [ ] **Phase 10 call-site, doc & skill updates:** Mechanical call-site, test, example,
       and documentation updates from the `try_` prefix rename sweep (135 files).
     - [ ] `.agents/skills/design-philosophy/SKILL.md`
@@ -1882,6 +1894,9 @@ preserved rustdoc comments, and zero regressions.
     - [ ] `tui/src/tui/terminal_lib_backends/pixel_char_bench.rs`
     - [ ] `tui/src/tui/terminal_window/terminal_window_api.rs`
     - [ ] `tui/src/tui/terminal_window/terminal_window_integration_tests/pty_main_event_loop_test.rs`
+
+#### Batch 3
+
 - [ ] **Phase 11 (`CommonResult` elimination):** Removal of `pub type CommonResult`,
       rename of `common_result_and_error.rs` -> `into_err.rs`, infallible `giti` `main`,
       and explicit `miette::Result` migration across workspace (45 files).
@@ -1913,7 +1928,8 @@ preserved rustdoc comments, and zero regressions.
     - [ ] `tui/examples/tui_apps/ex_rc/app_main.rs`
     - [ ] `tui/examples/tui_apps/ex_rc/launcher.rs`
     - [ ] `tui/examples/tui_apps/main.rs`
-    - [ ] `tui/src/core/common/into_err.rs` _(renamed from `common_result_and_error.rs`)_
+    - [ ] `tui/src/core/common/into_err.rs` _(deleted in Phase 12; was
+          `common_result_and_error.rs`)_
     - [ ] `tui/src/core/common/mod.rs`
     - [ ] `tui/src/core/decl_macros.rs`
     - [ ] `tui/src/core/stack_alloc_types/memory_allocator.rs`
@@ -1932,10 +1948,13 @@ preserved rustdoc comments, and zero regressions.
     - [ ] `tui/src/tui/terminal_window/manage_focus/component_registry.rs`
     - [ ] `tui/src/tui/terminal_window/terminal_window_api.rs`
     - [ ] `tui/src/tui/terminal_window/terminal_window_integration_tests/pty_main_event_loop_test.rs`
-- [ ] **Phase 12 (`TuiAvailability` removal + pure typed `giti` & `edi` errors up to `main`):**
-      Replacement of `TuiAvailability<T>` / `IntoErr` with typed `Result<T, E>` across
-      `r3bl_tui` and pure typed error propagation across `cmdr` (`giti` & `edi`) up to
-      `src/bin/*.rs` (50 files).
+
+#### Batch 4
+
+- [ ] **Phase 12 (`TuiAvailability` removal + pure typed `giti` & `edi` errors up to
+      `main`):** Replacement of `TuiAvailability<T>` / `IntoErr` with typed `Result<T, E>`
+      across `r3bl_tui` and pure typed error propagation across `cmdr` (`giti` & `edi`) up
+      to `src/bin/*.rs` (50 files).
     - [ ] `cmdr/src/analytics_client/upgrade_check.rs`
     - [ ] `cmdr/src/bin/edi.rs`
     - [ ] `cmdr/src/bin/giti.rs`

@@ -1,21 +1,19 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use crate::giti::{BranchNewDetails, CommandRunDetails, ui_str};
-use r3bl_tui::{BranchExists, CommandRunOutcome, CommandRunReport, IntoErr,
-               ReadlineAsyncContext, ReadlineEvent, TuiAvailability,
-               try_create_and_switch_to_branch, try_get_local_branches};
+use crate::giti::{BranchNewDetails, CommandRunDetails, GitiBranchError, ui_str};
+use r3bl_tui::{BranchExists, CommandRunOutcome, CommandRunReport, ReadlineAsyncContext,
+               ReadlineEvent, try_create_and_switch_to_branch, try_get_local_branches};
 
 /// The main function for `giti branch new` command.
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - Git operations fail
-/// - User input fails
-/// - Branch creation fails (branch already exists, invalid name, etc.)
+/// Returns [`GitiBranchError`] if:
+/// - Pre-flight git queries fail ([`GitiBranchError::Git`]).
+/// - Interactive branch name input fails ([`GitiBranchError::Readline`]).
 pub async fn try_handle_branch_new_command(
     maybe_branch_name: Option<String>,
-) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+) -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
     match maybe_branch_name {
         Some(branch_name) => command_execute::try_create_new_branch(branch_name).await,
         None => user_interaction::try_prompt_for_branch_name().await,
@@ -44,8 +42,11 @@ mod command_execute {
 
     pub async fn try_create_new_branch(
         branch_name: String,
-    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
-        let (_, branch_info) = try_get_local_branches().await.result?;
+    ) -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
+        let (_, branch_info) = try_get_local_branches()
+            .await
+            .result
+            .map_err(GitiBranchError::Git)?;
 
         if let BranchExists::Yes = branch_info.exists_locally(&branch_name) {
             let string =
@@ -72,7 +73,7 @@ mod command_execute {
                     ui_str::branch_create_display::error_failed_to_create_new_branch(
                         &branch_name,
                     );
-                let it = CommandRunReport::Fail(string, cmd, err.into());
+                let it = CommandRunReport::Fail(string, cmd, err);
                 Ok(it)
             }
         }
@@ -84,28 +85,35 @@ mod user_interaction {
     use super::*;
 
     pub async fn try_prompt_for_branch_name()
-    -> miette::Result<CommandRunReport<CommandRunDetails>> {
+    -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
         let prompt_text =
             ui_str::branch_create_display::enter_branch_name_you_want_to_create();
 
-        let mut rl_ctx =
-            match ReadlineAsyncContext::try_new(Some(&prompt_text), None).await {
-                TuiAvailability::Available(rl_ctx) => rl_ctx,
-                it => return it.into_err(),
-            };
+        let mut rl_ctx = ReadlineAsyncContext::try_new(Some(&prompt_text), None)
+            .await
+            .map_err(GitiBranchError::Readline)?;
 
         // The loop is just to handle the resize event.
         loop {
-            let evt = rl_ctx.try_read_line().await?;
+            let evt = rl_ctx
+                .try_read_line()
+                .await
+                .map_err(GitiBranchError::Readline)?;
             match evt {
                 ReadlineEvent::Line(branch_name) => {
-                    rl_ctx.try_request_shutdown(None).await?;
+                    rl_ctx
+                        .try_request_shutdown(None)
+                        .await
+                        .map_err(GitiBranchError::Readline)?;
                     rl_ctx.await_shutdown().await;
 
                     return command_execute::try_create_new_branch(branch_name).await;
                 }
                 ReadlineEvent::Eof | ReadlineEvent::Interrupted => {
-                    rl_ctx.try_request_shutdown(None).await?;
+                    rl_ctx
+                        .try_request_shutdown(None)
+                        .await
+                        .map_err(GitiBranchError::Readline)?;
                     rl_ctx.await_shutdown().await;
 
                     let it = CommandRunReport::Noop(

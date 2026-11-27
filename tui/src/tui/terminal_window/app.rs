@@ -28,7 +28,7 @@ pub trait App {
 
     /// This is called once at the beginning of the app's lifecycle. It is used to
     /// initialize the [`ComponentRegistryMap`] and [`HasFocus`] structs. It is called
-    /// before the first render by the [`crate::TerminalWindow::main_event_loop`].
+    /// before the first render by [`crate::TerminalWindow::try_main_event_loop`].
     fn app_init_components(
         &mut self,
         component_registry_map: &mut ComponentRegistryMap<Self::S, Self::AS>,

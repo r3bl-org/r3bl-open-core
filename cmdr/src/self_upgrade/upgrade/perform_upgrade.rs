@@ -7,7 +7,7 @@ use super::{super::{CrateDistribution, CrateMetadata, CrateName, CrateVersion,
             report_upgrade_source_error, run_source_build_with_spinner,
             try_download_and_verify_archive, try_extract_and_apply_archive, ui_strings};
 use r3bl_tui::{FilePermissionsError, HttpClientError, OutputDevice, Spinner,
-               SpinnerStyle, TempDirError, TuiAvailability, try_create_temp_dir};
+               SpinnerStyle, TempDirError, try_create_temp_dir};
 use std::{io, path::PathBuf, process::ExitStatus, time::Duration};
 
 /// Executes the resolved upgrade flow for `config`:
@@ -282,10 +282,7 @@ pub async fn try_download_and_replace_release_archive(
     )
     .await;
 
-    let mut maybe_spinner = match res_spinner {
-        TuiAvailability::Available(spinner) => Some(spinner),
-        _ => None,
-    };
+    let mut maybe_spinner = res_spinner.ok();
 
     let res_step = async {
         try_download_and_verify_archive(

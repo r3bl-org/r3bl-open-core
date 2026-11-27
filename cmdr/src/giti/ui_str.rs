@@ -1,17 +1,17 @@
 // Copyright (c) 2024-2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 use crate::common::fmt;
 use r3bl_tui::{InlineString, ItemsOwned, inline_string, join_fmt};
-use std::process::Output;
+use std::{fmt::Display, process::Output};
 
 pub const CURRENT_BRANCH_PREFIX: &str = "(◕‿◕)";
 
 #[must_use]
-pub fn unrecoverable_error_msg(report: miette::Report) -> InlineString {
+pub fn unrecoverable_error_msg(err: impl Display) -> InlineString {
     inline_string!(
         "{a}{b}\n{c}",
         a = fmt::error("Could not run giti due to the following problem"),
         b = fmt::colon(),
-        c = fmt::error(report)
+        c = fmt::error(err)
     )
 }
 

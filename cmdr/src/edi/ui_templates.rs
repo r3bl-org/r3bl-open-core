@@ -2,9 +2,9 @@
 
 use super::CLIArg;
 use crate::{common, edi::ui_str, prefix_single_select_instruction_header};
-use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, InlineVec, StyleSheet,
-               TuiAvailabilityChooseExt, cli_text_inline, cli_text_line, inline_vec,
-               try_choose, vp_height};
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, HowToChoose, InlineString, InlineVec,
+               StyleSheet, cli_text_inline, cli_text_line, inline_vec, try_choose,
+               vp_height};
 
 /// Ask the user to select a file to edit, and return the selected file path (if there is
 /// one).
@@ -35,7 +35,7 @@ pub async fn handle_multiple_files_not_supported_yet(
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
     )
-    .get_first_result()
+    .try_get_first_choice()
     .await
     .ok()
     .flatten()

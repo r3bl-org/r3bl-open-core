@@ -1,9 +1,8 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{CliTextInline, DEBUG_CHOOSE, DefaultIoDevices, InlineVec,
-               TuiAvailabilityChooseExt, TuiColor, TuiStyle,
-               assert_terminal_is_interactive, cli_text_inline, cli_text_line,
-               cli_text_lines, inline_vec,
+use r3bl_tui::{ChooseFutureExt, CliTextInline, DEBUG_CHOOSE, DefaultIoDevices,
+               InlineVec, TuiColor, TuiStyle, assert_terminal_is_interactive,
+               cli_text_inline, cli_text_line, cli_text_lines, inline_vec,
                log::try_initialize_logging_global,
                new_style, ok,
                readline_async::{HowToChoose, StyleSheet},
@@ -72,7 +71,7 @@ async fn try_main_impl() -> miette::Result<()> {
                 StyleSheet::default(),
                 default_io_devices.as_mut_tuple(),
             )
-            .get_first_result()
+            .try_get_first_choice()
             .await?
         };
 
@@ -171,7 +170,7 @@ async fn multi_line_header() -> miette::Result<()> {
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
     )
-    .get_all_results()
+    .try_get_all_choices()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {
@@ -210,7 +209,7 @@ async fn single_line_header(max_width_col_count: u16) -> miette::Result<()> {
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
     )
-    .get_all_results()
+    .try_get_all_choices()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {
@@ -256,7 +255,7 @@ async fn multiple_select_single_item() -> miette::Result<()> {
         StyleSheet::default(),
         default_io_devices.as_mut_tuple(),
     )
-    .get_all_results()
+    .try_get_all_choices()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {
@@ -310,7 +309,7 @@ async fn multiple_select_13_items_vph_5(
         style,
         default_io_devices.as_mut_tuple(),
     )
-    .get_all_results()
+    .try_get_all_choices()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {
@@ -359,7 +358,7 @@ async fn multiple_select_2_items_vph_5(
         style,
         default_io_devices.as_mut_tuple(),
     )
-    .get_all_results()
+    .try_get_all_choices()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {
@@ -411,7 +410,7 @@ async fn single_select_13_items_vph_5(
         style,
         default_io_devices.as_mut_tuple(),
     )
-    .get_first_result()
+    .try_get_first_choice()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {
@@ -459,7 +458,7 @@ async fn single_select_2_items_vph_5(
         style,
         default_io_devices.as_mut_tuple(),
     )
-    .get_first_result()
+    .try_get_first_choice()
     .await?;
 
     let Some(user_choice) = maybe_user_choice else {

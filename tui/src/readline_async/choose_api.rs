@@ -1,18 +1,32 @@
 // Copyright (c) 2023-2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use crate::{CalculateResizeHint, CaretVerticalViewportLocation, DEBUG_CHOOSE,
-            EventLoopResult, Header, InlineString, InputDevice, InputEvent, IntoErr,
-            ItemsOwned, Key, KeyPress, KeyState, ModifierKeysMask, OutputDevice,
-            RawModeError, SPACE_CHAR, SelectComponent, SpecialKey, State, StyleSheet,
-            TerminalInteractiveStatus, TerminalIoError, TuiAvailability, VPHeight,
-            VPWidth, ch, check_is_terminal_interactive, fg_green,
-            try_enter_event_loop_async, try_get_size, usize};
+            EventLoopResult, Header, InlineString, InputDevice, InputEvent, ItemsOwned,
+            Key, KeyPress, KeyState, ModifierKeysMask, OutputDevice, RawModeError,
+            SPACE_CHAR, SelectComponent, SpecialKey, State, StyleSheet, TerminalIoError,
+            TerminalNotInteractiveReason, TerminalSizeError, VPHeight, VPWidth, ch,
+            fg_green, try_enter_event_loop_async, try_ensure_terminal_interactive,
+            try_get_size, usize};
 use clap::ValueEnum;
 use std::{cmp::min, future::Future, pin::Pin};
 
-/// Errors that can occur while running the interactive [`try_choose`] picker.
+/// Errors that can occur while initializing or running the interactive [`try_choose`]
+/// picker.
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum ChooseError {
+    /// Terminal streams ([`stdin`] / [`stdout`]) are not interactive.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NotInteractive(TerminalNotInteractiveReason),
+
+    /// Failed to query the initial terminal window dimensions.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TerminalSize(TerminalSizeError),
+
     /// Failed to write to or flush the terminal output device.
     #[error("Terminal I/O failed")]
     Io(#[source] std::io::Error),
@@ -69,14 +83,8 @@ pub type ChooseFuture<'a> =
 ///
 /// # Returns
 ///
-/// Returns a [`TuiAvailability`] containing a pinned boxed future if the terminal is
-/// interactive. This explicitly represents all possible states:
-/// - [`Available`]: Terminal is interactive and initialization succeeded. Returns the
-///   future.
-/// - [`NotAvailable`]: Terminal is not interactive.
-/// - [`Broken`]: Initialization failed.
-///
-/// The future resolves to `Ok(ItemsOwned)` with the following behavior:
+/// Returns a [`ChooseFuture`] that resolves to `Ok(ItemsOwned)` with the following
+/// behavior:
 /// * **Single selection mode** (`HowToChoose::Single`):
 ///   - If user selects an item and presses Enter: returns an `ItemsOwned` containing the
 ///     selected item
@@ -89,12 +97,11 @@ pub type ChooseFuture<'a> =
 ///
 /// # Errors
 ///
-/// Returns a [`Broken`] variant containing a [`miette::Report`] if initialization (e.g.,
-/// getting terminal size) fails.
-///
-/// The returned future may produce [`miette::Error`] if the terminal event loop
-/// operations fail.
-///
+/// The returned future resolves to [`ChooseError`] if:
+/// * Terminal streams are not interactive ([`ChooseError::NotInteractive`]).
+/// * Terminal dimensions cannot be queried ([`ChooseError::TerminalSize`]).
+/// * Terminal event loop or raw mode operations fail ([`ChooseError::Io`],
+///   [`ChooseError::RawMode`], [`ChooseError::TerminalIo`]).
 ///
 /// # Why return a pinned boxed future?
 ///
@@ -132,15 +139,12 @@ pub type ChooseFuture<'a> =
 ///
 /// See [interactive terminal application entry points].
 ///
-/// [`Available`]: TuiAvailability::Available
-/// [`Broken`]: TuiAvailability::Broken
-/// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
 /// [`emit_stderr_redirection_disclaimer()`]: crate::emit_stderr_redirection_disclaimer
 /// [`ModalTerminalGuard::as_mut_tuple()`]: crate::ModalTerminalGuard::as_mut_tuple
-/// [`NotAvailable`]: TuiAvailability::NotAvailable
 /// [`ReadlineAsyncContext`]: crate::ReadlineAsyncContext
 /// [`stderr`]: std::io::stderr
 /// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
+#[must_use]
 pub fn try_choose<'a>(
     arg_header: impl Into<Header>,
     arg_options_to_choose_from: impl Into<ItemsOwned>,
@@ -149,154 +153,134 @@ pub fn try_choose<'a>(
     how: HowToChoose,
     stylesheet: StyleSheet,
     io: (&'a mut OutputDevice, &'a mut InputDevice),
-) -> TuiAvailability<ChooseFuture<'a>> {
+) -> ChooseFuture<'a> {
     let from = arg_options_to_choose_from.into();
     let header = arg_header.into();
 
-    match check_is_terminal_interactive() {
-        TerminalInteractiveStatus::NotAvailable(reason) => {
-            TuiAvailability::NotAvailable(reason)
-        }
+    Box::pin(async move {
+        try_ensure_terminal_interactive().map_err(ChooseError::NotInteractive)?;
+        let initial_size = try_get_size().map_err(ChooseError::TerminalSize)?;
 
-        TerminalInteractiveStatus::Available => {
-            let initial_size = match try_get_size() {
-                Ok(size) => size,
-                Err(e) => return TuiAvailability::Broken(e.into()),
-            };
+        // Destructure the io tuple.
+        let (output_device, input_device) = io;
 
-            TuiAvailability::Available(Box::pin(async move {
-                // Destructure the io tuple.
-                let (output_device, input_device) = io;
-
-                // - If the max size is None, then set it to DEFAULT_HEIGHT.
-                // - If the max size is Some, then this is the max height of the viewport.
-                //   - However, if this is 0, then set to DEFAULT_HEIGHT.
-                //   - Otherwise, check whether the number of items is less than this max
-                //     height and set the max height to the number of items.
-                //   - Otherwise, if there are more items than the max height, then clamp
-                //     it to the max height.
-                let max_display_height = ch({
-                    match maybe_max_height {
-                        None => DEFAULT_HEIGHT,
-                        Some(row_height) => {
-                            let row_height = row_height.as_usize();
-                            if row_height == 0 {
-                                DEFAULT_HEIGHT
-                            } else {
-                                min(row_height, from.len())
-                            }
-                        }
+        // - If the max size is None, then set it to DEFAULT_HEIGHT.
+        // - If the max size is Some, then this is the max height of the viewport.
+        //   - However, if this is 0, then set to DEFAULT_HEIGHT.
+        //   - Otherwise, check whether the number of items is less than this max
+        //     height and set the max height to the number of items.
+        //   - Otherwise, if there are more items than the max height, then clamp
+        //     it to the max height.
+        let max_display_height = ch({
+            match maybe_max_height {
+                None => DEFAULT_HEIGHT,
+                Some(row_height) => {
+                    let row_height = row_height.as_usize();
+                    if row_height == 0 {
+                        DEFAULT_HEIGHT
+                    } else {
+                        min(row_height, from.len())
                     }
-                });
-
-                let max_display_width = ch(match maybe_max_width {
-                    None => 0,
-                    Some(col_width) => col_width.as_usize(),
-                });
-
-                let mut state = State {
-                    max_display_height,
-                    max_display_width,
-                    items: from,
-                    header,
-                    selection_mode: how,
-                    ..Default::default()
-                };
-                state.set_size(initial_size);
-
-                let mut function_component = SelectComponent {
-                    output_device: output_device.clone(),
-                    style: stylesheet,
-                };
-
-                let res_user_input = try_enter_event_loop_async(
-                    &mut state,
-                    &mut function_component,
-                    keypress_handler,
-                    input_device,
-                )
-                .await;
-
-                match res_user_input {
-                    Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
-                    _ => Ok(ItemsOwned::default()),
                 }
-            }))
+            }
+        });
+
+        let max_display_width = ch(match maybe_max_width {
+            None => 0,
+            Some(col_width) => col_width.as_usize(),
+        });
+
+        let mut state = State {
+            max_display_height,
+            max_display_width,
+            items: from,
+            header,
+            selection_mode: how,
+            ..Default::default()
+        };
+        state.set_size(initial_size);
+
+        let mut function_component = SelectComponent {
+            output_device: output_device.clone(),
+            style: stylesheet,
+        };
+
+        let res_user_input = try_enter_event_loop_async(
+            &mut state,
+            &mut function_component,
+            keypress_handler,
+            input_device,
+        )
+        .await;
+
+        match res_user_input {
+            Ok(EventLoopResult::ExitWithResult(it)) => Ok(it),
+            _ => Ok(ItemsOwned::default()),
         }
-    }
+    })
 }
 
-/// Extension trait for [`TuiAvailability<ChooseFuture<'a>>`] to provide a fluent API for
-/// common patterns of using the result of the [`try_choose`] function.
+/// Extension trait for [`ChooseFuture<'a>`] to provide a fluent API for common patterns
+/// of consuming the output of [`try_choose`].
 ///
-/// The are two patterns of using the result of the [`try_choose`] function:
-/// 1. Single selection. For this we have [`get_first_result()`]. Call sites include
+/// There are two patterns of using [`try_choose`]:
+/// 1. Single selection via [`try_get_first_choice()`]. Call sites include
 ///    [`branch_checkout_command.rs`] and [`upgrade_check.rs`].
-/// 2. Multiple selection. For this we have [`get_all_results()`].
+/// 2. Multiple selection via [`try_get_all_choices()`].
 ///
 /// [`branch_checkout_command.rs`]:
 ///     https://github.com/r3bl-org/r3bl-open-core/blob/main/cmdr/src/giti/branch/branch_checkout_command.rs
-/// [`get_all_results()`]: Self::get_all_results
-/// [`get_first_result()`]: Self::get_first_result
+/// [`try_get_all_choices()`]: Self::try_get_all_choices
+/// [`try_get_first_choice()`]: Self::try_get_first_choice
 /// [`upgrade_check.rs`]:
 ///     https://github.com/r3bl-org/r3bl-open-core/blob/main/cmdr/src/analytics_client/upgrade_check.rs
 #[allow(async_fn_in_trait)]
-pub trait TuiAvailabilityChooseExt {
-    /// Propagate errors for a single selection.
+pub trait ChooseFutureExt {
+    /// Awaits a single selection choice, propagating [`ChooseError`] on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChooseError`] if the terminal is non-interactive, size detection fails,
+    /// or the interactive event loop fails.
     ///
     /// # Returns
     ///
-    /// - [`Err`] if the TUI is [`Broken`] or [`NotAvailable`].
-    /// - If cancelled return [`Ok(None)`].
-    /// - Otherwise returns [`Ok(Some(item))`] on selection if it has a single item (or
-    ///   more).
-    /// - Otherwise returns [`Ok(None)`] if selection is empty.
+    /// - [`Ok(None)`] if cancelled or selection is empty.
+    /// - [`Ok(Some(item))`] containing the first selected item otherwise.
     ///
-    /// [`Broken`]: TuiAvailability::Broken
-    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`Ok(None)`]: Option::None
     /// [`Ok(Some(item))`]: Option::Some
-    /// [`Some(item)`]: Option::Some
-    async fn get_first_result(self) -> miette::Result<Option<InlineString>>;
+    async fn try_get_first_choice(self) -> Result<Option<InlineString>, ChooseError>;
 
-    /// Propagate errors for multiple selections.
+    /// Awaits multiple selection choices, propagating [`ChooseError`] on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ChooseError`] if the terminal is non-interactive, size detection fails,
+    /// or the interactive event loop fails.
     ///
     /// # Returns
     ///
-    /// - [`Err`] if the TUI is [`Broken`] or [`NotAvailable`].
-    /// - If selection is empty returns [`Ok(None)`].
-    /// - Otherwise return [`Ok(Some(items))`] on selection (which contains at least 1
-    ///   item).
+    /// - [`Ok(None)`] if cancelled or selection is empty.
+    /// - [`Ok(Some(items))`] on selection (containing at least 1 item).
     ///
-    /// [`Broken`]: TuiAvailability::Broken
-    /// [`NotAvailable`]: TuiAvailability::NotAvailable
     /// [`Ok(None)`]: Option::None
     /// [`Ok(Some(items))`]: Option::Some
-    async fn get_all_results(self) -> miette::Result<Option<ItemsOwned>>;
+    async fn try_get_all_choices(self) -> Result<Option<ItemsOwned>, ChooseError>;
 }
 
-impl TuiAvailabilityChooseExt for TuiAvailability<ChooseFuture<'_>> {
-    async fn get_first_result(self) -> miette::Result<Option<InlineString>> {
-        match self {
-            TuiAvailability::Available(future) => {
-                let items = future.await?;
-                Ok(items.into_iter().next()) // First item.
-            }
-            it => it.into_err(),
-        }
+impl ChooseFutureExt for ChooseFuture<'_> {
+    async fn try_get_first_choice(self) -> Result<Option<InlineString>, ChooseError> {
+        let items = self.await?;
+        Ok(items.into_iter().next()) // First item.
     }
 
-    async fn get_all_results(self) -> miette::Result<Option<ItemsOwned>> {
-        match self {
-            TuiAvailability::Available(future) => {
-                let items = future.await?;
-                if items.is_empty() {
-                    Ok(None)
-                } else {
-                    Ok(Some(items))
-                }
-            }
-            it => it.into_err(),
+    async fn try_get_all_choices(self) -> Result<Option<ItemsOwned>, ChooseError> {
+        let items = self.await?;
+        if items.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(items))
         }
     }
 }

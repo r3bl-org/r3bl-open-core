@@ -8,7 +8,7 @@
 
 use super::constants::{DEFAULT_WIDTH, ERR_MSG_BOTH_NOT_INTERACTIVE,
                        ERR_MSG_STDIN_NOT_INTERACTIVE, ERR_MSG_STDOUT_NOT_INTERACTIVE};
-use crate::{AtomicU8Ext as _, IntoErr,
+use crate::{AtomicU8Ext as _,
             TTYResult::{IsInteractive, IsNotInteractive},
             TtyStatus, VPSize, VPWidth, is_tty_stderr, is_tty_stdin, is_tty_stdout,
             vp_height, vp_width};
@@ -25,35 +25,6 @@ pub enum TerminalSizeError {
     #[cfg(unix)]
     #[error("Failed to query terminal window size via tcgetwinsize")]
     Errno(#[source] rustix::io::Errno),
-}
-
-/// Returned by [interactive terminal application entry points] (which are fallible).
-///
-/// Initialization ([`try_get_size()`], entering [raw mode], etc.) is fallible, since they
-/// require the use of [`ioctl`] (which is wrapped by [`rustix`]), so this type has a
-/// [`Broken`] variant to represent this state.
-///
-/// [`Broken`]: Self::Broken
-/// [`ioctl`]: https://manpages.debian.org/ioctl.2
-/// [`rustix`]: rustix
-/// [interactive terminal application entry points]: crate#interactive-terminal-application-entry-points
-#[derive(Debug)]
-pub enum TuiAvailability<T> {
-    Available(T),
-    NotAvailable(TerminalNotInteractiveReason),
-    Broken(miette::Report),
-}
-
-impl<T> IntoErr for TuiAvailability<T> {
-    fn into_err<U>(self) -> miette::Result<U> {
-        match self {
-            Self::Available(_) => {
-                unreachable!("logic error: into_err() called on Available")
-            }
-            Self::NotAvailable(reason) => reason.into_err(),
-            Self::Broken(report) => report.into_err(),
-        }
-    }
 }
 
 /// Represents the interactivity status of the terminal streams ([`stdin`] and
@@ -144,9 +115,8 @@ pub enum TerminalInteractiveStatus {
 }
 
 /// Gets the interactivity status of the terminal by querying [`isatty`] on [`stdin`]
-/// and [`stdout`], which is infallible, so there is no [`Broken`] variant.
+/// and [`stdout`], which is infallible.
 ///
-/// [`Broken`]: TuiAvailability::Broken
 /// [`isatty`]: https://manpages.debian.org/isatty.3
 /// [`stdin`]: std::io::stdin
 /// [`stdout`]: std::io::stdout
@@ -163,6 +133,23 @@ pub fn check_is_terminal_interactive() -> TerminalInteractiveStatus {
         (IsNotInteractive, IsNotInteractive) => TerminalInteractiveStatus::NotAvailable(
             TerminalNotInteractiveReason::BothStdinAndStdoutNotInteractive,
         ),
+    }
+}
+
+/// Verifies that both [`stdin`] and [`stdout`] are interactive [`TTY`] streams.
+///
+/// # Errors
+///
+/// Returns [`TerminalNotInteractiveReason`] if [`stdin`], [`stdout`], or both are not
+/// connected to an interactive terminal.
+///
+/// [`stdin`]: std::io::stdin
+/// [`stdout`]: std::io::stdout
+/// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
+pub fn try_ensure_terminal_interactive() -> Result<(), TerminalNotInteractiveReason> {
+    match check_is_terminal_interactive() {
+        TerminalInteractiveStatus::Available => Ok(()),
+        TerminalInteractiveStatus::NotAvailable(reason) => Err(reason),
     }
 }
 
@@ -205,10 +192,6 @@ impl TerminalNotInteractiveReason {
             Self::BothStdinAndStdoutNotInteractive => ERR_MSG_BOTH_NOT_INTERACTIVE,
         }
     }
-}
-
-impl IntoErr for TerminalNotInteractiveReason {
-    fn into_err<T>(self) -> miette::Result<T> { Err(self.into()) }
 }
 
 /// Tracks whether [`emit_stderr_redirection_disclaimer()`] has already run.
@@ -326,7 +309,7 @@ pub fn is_input_interactive() -> TTYResult {
 /// [`stdout`]: std::io::stdout
 /// [`try_choose()`]: crate::try_choose
 /// [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
-/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 #[must_use]
 pub fn is_output_interactive() -> TTYResult {
     if is_tty_stdout() == TtyStatus::IsTty {

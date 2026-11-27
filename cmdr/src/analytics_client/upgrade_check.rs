@@ -57,9 +57,9 @@
 
 use super::ui_str;
 use crate::{DEBUG_ANALYTICS_CLIENT, prefix_single_select_instruction_header};
-use r3bl_tui::{DefaultIoDevices, HowToChoose, InlineString, OscPtyEvent, OutputDevice,
-               Spinner, SpinnerStyle, StyleSheet, TerminalInteractiveStatus,
-               TuiAvailability, TuiAvailabilityChooseExt, check_is_terminal_interactive,
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, HowToChoose, InlineString,
+               OscPtyEvent, OutputDevice, Spinner, SpinnerStyle, StyleSheet,
+               TerminalInteractiveStatus, check_is_terminal_interactive,
                cli_text_inline, cli_text_line,
                core::pty::{DefaultPtySessionConfig, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigToken},
@@ -192,7 +192,7 @@ pub async fn show_exit_message(context: ExitContext) {
             StyleSheet::default(),
             io.as_mut_tuple(),
         )
-        .get_first_result()
+        .try_get_first_choice()
         .await
         .ok()
         .flatten();
@@ -392,10 +392,7 @@ async fn install_upgrade_command_with_spinner_and_ctrl_c() {
     )
     .await;
 
-    let mut maybe_spinner = match res_spinner {
-        TuiAvailability::Available(spinner) => Some(spinner),
-        _ => None,
-    };
+    let mut maybe_spinner = res_spinner.ok();
 
     // First: Run rustup update (spinner shows with output-based progress).
     let res_rustup_update = run_rustup_update(maybe_spinner.as_ref()).await;

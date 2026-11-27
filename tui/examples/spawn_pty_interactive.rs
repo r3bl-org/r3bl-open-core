@@ -21,9 +21,9 @@
 //! [`stdout`]: std::io::stdout
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR, SGR_FG_BRIGHT_CYAN_STR,
-               SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR, SGR_FG_BRIGHT_YELLOW_STR,
-               SGR_RESET_STR, TuiAvailabilityChooseExt, assert_terminal_is_interactive,
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, SGR_FG_BRIGHT_BLUE_STR,
+               SGR_FG_BRIGHT_CYAN_STR, SGR_FG_BRIGHT_GREEN_STR, SGR_FG_BRIGHT_RED_STR,
+               SGR_FG_BRIGHT_YELLOW_STR, SGR_RESET_STR, assert_terminal_is_interactive,
                core::pty::{ControlSequence, CursorKeyMode, DefaultPtySessionConfig,
                            PtyInputEvent, PtyOutputEvent, PtySessionBuilder,
                            PtySessionConfigToken},
@@ -336,7 +336,7 @@ async fn try_main_impl() -> miette::Result<()> {
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .get_first_result()
+        .try_get_first_choice()
         .await?
     };
 

@@ -61,7 +61,7 @@
 //!
 //! 1. **Full TUI Setup & Terminal Awareness:** The user opens a terminal emulator app
 //!    (e.g., [`WezTerm`]), and runs a full-TUI app. The app boots via
-//!    [`crate::tui::TerminalWindow::main_event_loop()`]. The `r3bl_tui` framework
+//!    [`crate::tui::TerminalWindow::try_main_event_loop()`]. The `r3bl_tui` framework
 //!    automatically puts the terminal in [Raw Mode], spins up the [Resilient Reactor
 //!    Thread] (RRT) for [`mio`], and emits [`ANSI`] sequences like `ESC[ ? 1003h` (Enable
 //!    Any-Event Mouse Tracking) to [`stdout`], which tells the terminal emulator app that
@@ -140,7 +140,7 @@
 //! [`ASCII`]: https://en.wikipedia.org/wiki/ASCII
 //! [`chunk_decoder`]: mod@super
 //! [`convert_input_event()`]: crate::direct_to_ansi::input::protocol_conversion::convert_input_event
-//! [`crate::tui::TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
+//! [`crate::tui::TerminalWindow::try_main_event_loop()`]: crate::tui::TerminalWindow::try_main_event_loop
 //! [`CSI`]: crate::CsiSequence
 //! [`gnome-terminal`]: https://en.wikipedia.org/wiki/GNOME_Terminal
 //! [`iTerm2`]: https://iterm2.com/

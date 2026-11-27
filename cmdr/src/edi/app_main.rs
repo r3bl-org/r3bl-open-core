@@ -572,43 +572,41 @@ mod populate_component_registry {
 
 mod stylesheet {
     use super::{Id, new_style, tui_color, tui_stylesheet};
-    use r3bl_tui::{TuiStylesheet, throws_with_return};
+    use r3bl_tui::{StylesheetError, TuiStylesheet};
 
-    pub fn try_create_stylesheet() -> miette::Result<TuiStylesheet> {
-        throws_with_return!({
-            tui_stylesheet! {
-                new_style!(
-                    id: {Id::StyleEditorDefault}
-                    padding: {1}
-                    // These are ignored due to syntax highlighting.
-                    // attrib: [bold]
-                    // color_fg: TuiColor::Blue
-                ),
-                new_style!(
-                    id: {Id::StyleDialogTitle}
-                    lolcat
-                    // These are ignored due to lolcat: true.
-                    // attrib: [bold]
-                    // color_fg: TuiColor::Yellow
-                ),
-                new_style!(
-                    id: {Id::StyleDialogBorder}
-                    lolcat
-                    // These are ignored due to lolcat: true.
-                    // attrib: [dim]
-                    // color_fg: TuiColor::Green
-                ),
-                new_style!(
-                    id: {Id::StyleDialogEditor}
-                    bold
-                    color_fg: {tui_color!(magenta)}
-                ),
-                new_style!(
-                    id: {Id::StyleDialogResultsPanel}
-                    // bold
-                    color_fg: {tui_color!(blue)}
-                )
-            }
+    pub fn try_create_stylesheet() -> Result<TuiStylesheet, StylesheetError> {
+        Ok(tui_stylesheet! {
+            new_style!(
+                id: {Id::StyleEditorDefault}
+                padding: {1}
+                // These are ignored due to syntax highlighting.
+                // attrib: [bold]
+                // color_fg: TuiColor::Blue
+            ),
+            new_style!(
+                id: {Id::StyleDialogTitle}
+                lolcat
+                // These are ignored due to lolcat: true.
+                // attrib: [bold]
+                // color_fg: TuiColor::Yellow
+            ),
+            new_style!(
+                id: {Id::StyleDialogBorder}
+                lolcat
+                // These are ignored due to lolcat: true.
+                // attrib: [dim]
+                // color_fg: TuiColor::Green
+            ),
+            new_style!(
+                id: {Id::StyleDialogEditor}
+                bold
+                color_fg: {tui_color!(magenta)}
+            ),
+            new_style!(
+                id: {Id::StyleDialogResultsPanel}
+                // bold
+                color_fg: {tui_color!(blue)}
+            )
         })
     }
 }

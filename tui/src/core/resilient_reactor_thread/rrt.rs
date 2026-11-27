@@ -588,7 +588,7 @@ pub struct RRT<W: RRTWorker> {
     /// [`RRTEvent::Shutdown`]: super::RRTEvent::Shutdown
     /// [`RRTEvent::Worker`]: super::RRTEvent::Worker
     /// [`sender.subscribe()`]: tokio::sync::broadcast::Sender::subscribe()
-    /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+    /// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
     /// [broadcast channel]: tokio::sync::broadcast
     /// [const expression]: #const-expression-vs-const-declaration-vs-static-declaration
     /// [receiver]: tokio::sync::broadcast::Receiver
@@ -731,7 +731,7 @@ impl<W: RRTWorker> RRT<W> {
     /// [`ThreadState`]: ThreadState
     /// [`tokio`]: tokio
     /// [`try_subscribe()`]: RRT::try_subscribe
-    /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+    /// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
     /// [`WorkerCreation`]: SubscribeError::WorkerCreation
     /// [lock for the `state`]: super::ThreadLifecycleMonitor::lock()
     pub fn try_subscribe(

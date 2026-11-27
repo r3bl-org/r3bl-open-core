@@ -326,16 +326,16 @@ Here are some videos that you can watch to get a better understanding of TTY pro
 - [Build with Naz: async readline]
 
 This crate provides five entry points for building interactive terminal applications. Each
-internalizes terminal availability and size checks, and returns a `TuiAvailability<T>`
-enum:
+internalizes terminal availability and size checks, returning a concrete typed `Result`
+(or pinned future resolving to a typed `Result`):
 
-| Entry Point                         | Purpose                | Best For                                                               |
-| :---------------------------------- | :--------------------- | :--------------------------------------------------------------------- |
-| `TerminalWindow::main_event_loop()` | Full TUI framework     | Complex, multi-component apps with layouts, dialogs, and custom logic. |
-| `ReadlineAsyncContext::try_new()`   | Async Readline         | CLI-style line input, REPLs, and background logging.                   |
-| `choose()`                          | Interactive Selection  | Prompting user to select one or more items from a list.                |
-| `PTYMuxBuilder::build()`            | Terminal Multiplexer   | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
-| `Spinner::try_start()`              | Indeterminate Progress | Long-running tasks needing visual feedback (standalone or embedded).   |
+| Entry Point                             | Purpose                | Best For                                                               |
+| :-------------------------------------- | :--------------------- | :--------------------------------------------------------------------- |
+| `TerminalWindow::try_main_event_loop()` | Full TUI framework     | Complex, multi-component apps with layouts, dialogs, and custom logic. |
+| `ReadlineAsyncContext::try_new()`       | Async Readline         | CLI-style line input, REPLs, and background logging.                   |
+| `try_choose()`                          | Interactive Selection  | Prompting user to select one or more items from a list.                |
+| `PTYMuxBuilder::try_build()`            | Terminal Multiplexer   | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI. |
+| `Spinner::try_start()`                  | Indeterminate Progress | Long-running tasks needing visual feedback (standalone or embedded).   |
 
 ### Full TUI (async, raw mode, full screen) for immersive TUI apps
 

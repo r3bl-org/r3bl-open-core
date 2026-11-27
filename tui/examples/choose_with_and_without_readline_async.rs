@@ -1,8 +1,7 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{InputDevice, IntoErr, OutputDevice, TuiAvailability,
-               TuiAvailabilityChooseExt, assert_terminal_is_interactive, fg_slate_gray,
-               ok,
+use r3bl_tui::{ChooseFutureExt, InputDevice, OutputDevice,
+               assert_terminal_is_interactive, fg_slate_gray, ok,
                readline_async::{Header, HowToChoose, ReadlineAsyncContext, StyleSheet,
                                 try_choose},
                run_in_main_with_safe_stack, try_initialize_logging_global};
@@ -36,7 +35,7 @@ async fn without_readline_async() -> miette::Result<()> {
         StyleSheet::sea_foam_style(),
         (&mut output_device, &mut input_device),
     )
-    .get_all_results()
+    .try_get_all_choices()
     .await?;
 
     println!(
@@ -49,7 +48,7 @@ async fn without_readline_async() -> miette::Result<()> {
 
 async fn with_readline_async() -> miette::Result<()> {
     // If the terminal is not fully interactive, then return early.
-    let mut rl_ctx = match ReadlineAsyncContext::try_new(
+    let mut rl_ctx = ReadlineAsyncContext::try_new(
         {
             // Generate prompt.
             let prompt_seg_1 = fg_slate_gray("╭>╮").bg_moonlight_blue();
@@ -58,11 +57,7 @@ async fn with_readline_async() -> miette::Result<()> {
         },
         None, // Use default channel capacity
     )
-    .await
-    {
-        TuiAvailability::Available(rl_ctx) => rl_ctx,
-        it => return it.into_err(),
-    };
+    .await?;
 
     // Start a task to write some output to the shared writer. This output should be
     // paused (as long as try_choose() is active).
@@ -92,7 +87,7 @@ async fn with_readline_async() -> miette::Result<()> {
             StyleSheet::hot_pink_style(),
             terminal_guard.as_mut_tuple(),
         )
-        .get_first_result()
+        .try_get_first_choice()
         .await?
     };
 

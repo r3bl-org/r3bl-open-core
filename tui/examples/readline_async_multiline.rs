@@ -33,7 +33,7 @@
 //! [`SharedWriter`]: r3bl_tui::SharedWriter
 
 use miette::IntoDiagnostic;
-use r3bl_tui::{IntoErr, TuiAvailability, assert_terminal_is_interactive, ok,
+use r3bl_tui::{assert_terminal_is_interactive, ok,
                readline_async::{ReadlineAsyncContext, ReadlineEvent},
                rla_println, run_in_main_with_safe_stack};
 use std::io::Write;
@@ -43,10 +43,7 @@ fn main() -> miette::Result<()> { run_in_main_with_safe_stack!(async => try_main
 async fn try_main_impl() -> miette::Result<()> {
     assert_terminal_is_interactive();
 
-    let mut rl_ctx = match ReadlineAsyncContext::try_new(Some("> "), None).await {
-        TuiAvailability::Available(rl_ctx) => rl_ctx,
-        it => return it.into_err(),
-    };
+    let mut rl_ctx = ReadlineAsyncContext::try_new(Some("> "), None).await?;
 
     // Get the shared writer for logging.
     let mut shared_writer = rl_ctx.clone_shared_writer();

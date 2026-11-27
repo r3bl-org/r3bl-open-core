@@ -3,12 +3,12 @@
 use crate::{AnalyticsAction, common,
             common::ui_templates::{prefix_multi_select_instruction_header,
                                    prefix_single_select_instruction_header},
-            giti::{BranchDeleteDetails, CommandRunDetails,
+            giti::{BranchDeleteDetails, CommandRunDetails, GitiBranchError,
                    ui_str::{self}},
             report_analytics};
-use r3bl_tui::{BranchExists, CliTextInline, CommandRunOutcome, CommandRunReport,
-               DefaultIoDevices, InlineString, InlineVec, ItemsOwned,
-               TuiAvailabilityChooseExt, cli_text_inline, cli_text_line, inline_vec,
+use r3bl_tui::{BranchExists, ChooseFutureExt, CliTextInline, CommandRunOutcome,
+               CommandRunReport, DefaultIoDevices, InlineString, InlineVec, ItemsOwned,
+               cli_text_inline, cli_text_line, inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_choose, try_delete_branches, try_get_local_branches, vp_height};
 use smallvec::smallvec;
@@ -17,13 +17,12 @@ use smallvec::smallvec;
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - Git operations fail
-/// - User interaction fails
-/// - Branch deletion fails (protected branch, not found, etc.)
+/// Returns [`GitiBranchError`] if:
+/// - Pre-flight git queries fail ([`GitiBranchError::Git`]).
+/// - Interactive branch selection or confirmation fails ([`GitiBranchError::Choose`]).
 pub async fn try_handle_branch_delete_command(
     maybe_branch_name: Option<String>,
-) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+) -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
     report_analytics::start_task_to_generate_event(
         String::new(),
         AnalyticsAction::GitiBranchDelete,
@@ -36,7 +35,10 @@ pub async fn try_handle_branch_delete_command(
         // - branch_name does not exist locally.
         // - branch_name is the same as the current branch.
         let branch_name: InlineString = branch_name.trim().into();
-        let (_, branch_info) = try_get_local_branches().await.result?;
+        let (_, branch_info) = try_get_local_branches()
+            .await
+            .result
+            .map_err(GitiBranchError::Git)?;
         if branch_name.is_empty()
             || branch_info.exists_locally(&branch_name) == BranchExists::No
             || branch_info.current_branch == branch_name
@@ -58,8 +60,9 @@ pub async fn try_handle_branch_delete_command(
         match selected_action {
             // Actually delete the branch.
             parse_user_choice::Selection::Delete => {
-                return command_execute::try_delete_selected_branches(&branch_to_delete)
-                    .await;
+                return Ok(
+                    command_execute::delete_selected_branches(&branch_to_delete).await
+                );
             }
             // Do nothing.
             parse_user_choice::Selection::ExitProgram => {
@@ -95,7 +98,7 @@ pub async fn try_handle_branch_delete_command(
                 .await?;
 
         if let parse_user_choice::Selection::Delete = selected_action {
-            return command_execute::try_delete_selected_branches(&branches).await;
+            return Ok(command_execute::delete_selected_branches(&branches).await);
         }
     }
 
@@ -133,7 +136,7 @@ mod user_interaction {
 
     pub async fn try_select_branches_to_delete(
         branch_options: ItemsOwned,
-    ) -> miette::Result<Option<ItemsOwned>> {
+    ) -> Result<Option<ItemsOwned>, GitiBranchError> {
         let header_with_instructions = {
             let last_line = cli_text_line![cli_text_inline(
                 ui_str::branch_delete_display::select_branches_msg_raw(),
@@ -153,8 +156,9 @@ mod user_interaction {
                 StyleSheet::default(),
                 default_io_devices.as_mut_tuple(),
             )
-            .get_all_results()
-            .await?
+            .try_get_all_choices()
+            .await
+            .map_err(GitiBranchError::Choose)?
         };
 
         Ok(maybe_results)
@@ -202,7 +206,7 @@ mod user_interaction {
     pub async fn try_get_user_confirmation(
         header_text: InlineString,
         confirmation_options: ItemsOwned,
-    ) -> miette::Result<parse_user_choice::Selection> {
+    ) -> Result<parse_user_choice::Selection, GitiBranchError> {
         // Apply one style to the first line of the header, and another style to the rest
         // of the lines. Then prefix with the instruction header.
         let header_with_instructions = {
@@ -240,8 +244,9 @@ mod user_interaction {
                 StyleSheet::default(),
                 default_io_devices.as_mut_tuple(),
             )
-            .get_first_result()
-            .await?
+            .try_get_first_choice()
+            .await
+            .map_err(GitiBranchError::Choose)?
         };
 
         Ok(parse_user_choice::Selection::from(user_choice))
@@ -252,31 +257,25 @@ mod command_execute {
     #[allow(clippy::wildcard_imports)]
     use super::*;
 
-    pub async fn try_delete_selected_branches(
+    pub async fn delete_selected_branches(
         branches: &ItemsOwned,
-    ) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+    ) -> CommandRunReport<CommandRunDetails> {
         debug_assert!(!branches.is_empty());
         let CommandRunOutcome {
             result: res_output,
             command: cmd,
         } = try_delete_branches(branches).await;
         match res_output {
-            Ok(()) => {
-                let it = CommandRunReport::Run(
-                    ui_str::branch_delete_display::info_success_msg(branches),
-                    details::with_details(branches.clone()),
-                    cmd,
-                );
-                Ok(it)
-            }
-            Err(err) => {
-                let it = CommandRunReport::Fail(
-                    ui_str::branch_delete_display::error_failed_msg(branches, None),
-                    cmd,
-                    err.into(),
-                );
-                Ok(it)
-            }
+            Ok(()) => CommandRunReport::Run(
+                ui_str::branch_delete_display::info_success_msg(branches),
+                details::with_details(branches.clone()),
+                cmd,
+            ),
+            Err(err) => CommandRunReport::Fail(
+                ui_str::branch_delete_display::error_failed_msg(branches, None),
+                cmd,
+                err,
+            ),
         }
     }
 }

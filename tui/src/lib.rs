@@ -509,16 +509,16 @@
 //! -->
 //!
 //! This crate provides five entry points for building interactive terminal applications.
-//! Each internalizes terminal availability and size checks, and returns a
-//! [`TuiAvailability<T>`] enum.
+//! Each internalizes terminal availability and size checks, returning a concrete typed
+//! [`Result`] (or pinned future resolving to a typed [`Result`]):
 //!
-//! | Entry Point                             | Purpose                   | Returns                                     | Best For                                                                 |
-//! | :-------------------------------------- | :------------------------ | :------------------------------------------ | :----------------------------------------------------------------------- |
-//! | [`TerminalWindow::main_event_loop()`]   | Full TUI framework        | [`TuiAvailability<MainEventLoopFuture>`]    | Complex, multi-component apps with layouts, dialogs, and custom logic.   |
-//! | [`ReadlineAsyncContext::try_new()`]     | Async Readline            | [`TuiAvailability<ReadlineAsyncContext>`]   | CLI-style line input, REPLs, and background logging.                     |
-//! | [`try_choose()`]                        | Interactive Selection     | [`TuiAvailability<ChooseFuture>`]           | Prompting user to select one or more items from a list.                  |
-//! | [`PTYMuxBuilder::build()`]              | Terminal Multiplexer      | [`TuiAvailability<PTYMux>`]                 | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI.   |
-//! | [`Spinner::try_start()`]                | Indeterminate Progress    | [`TuiAvailability<Spinner>`]                | Long-running tasks needing visual feedback (standalone or embedded).     |
+//! | Entry Point                                | Purpose                   | Returns                                        | Best For                                                                 |
+//! | :----------------------------------------- | :------------------------ | :--------------------------------------------- | :----------------------------------------------------------------------- |
+//! | [`TerminalWindow::try_main_event_loop()`]  | Full TUI framework        | [`MainEventLoopFuture`] (`MainEventLoopError`) | Complex, multi-component apps with layouts, dialogs, and custom logic.   |
+//! | [`ReadlineAsyncContext::try_new()`]        | Async Readline            | `Result<ReadlineAsyncContext, ReadlineError>`  | CLI-style line input, REPLs, and background logging.                     |
+//! | [`try_choose()`]                           | Interactive Selection     | [`ChooseFuture`] (`ChooseError`)               | Prompting user to select one or more items from a list.                  |
+//! | [`PTYMuxBuilder::try_build()`]             | Terminal Multiplexer      | `Result<PTYMux, PtyMuxError>`                  | Wrapping existing CLI tools (like `htop`, `bash`) in a multi-pane TUI.   |
+//! | [`Spinner::try_start()`]                   | Indeterminate Progress    | `Result<Spinner, SpinnerError>`                | Long-running tasks needing visual feedback (standalone or embedded).     |
 //!
 //! [`Spinner::try_start()`] only checks [`stdout`] interactivity (not [`stdin`]), so it
 //! works with piped [`stdin`]. It can run standalone or embedded within a
@@ -3052,19 +3052,15 @@
 //! ### Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, IntoErr, PTYMux, ok};
+//! use r3bl_tui::{PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
-//!     let multiplexer = match PTYMux::builder()
+//!     let multiplexer = PTYMux::builder()
 //!         .add_process("bash", "bash", vec![])
 //!         .add_process("editor", "nvim", vec![])
 //!         .add_process("monitor", "htop", vec![])
-//!         .build()
-//!     {
-//!         TuiAvailability::Available(mux) => mux,
-//!         it => return it.into_err(),
-//!     };
+//!         .try_build()?;
 //!
 //!     multiplexer.try_run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
 //!     ok!()
@@ -3252,6 +3248,7 @@
 //! [`CCol`]: crate::CCol
 //! [`CHeight`]: crate::CHeight
 //! [`child`]: field@PtyTestContext::child
+//! [`ChooseFuture`]: crate::ChooseFuture
 //! [`ChUnit`]: crate::ChUnit
 //! [`ChunkFramer`]: crate::core::ansi::vt_100_terminal_input_parser::ChunkFramer
 //! [`Component::handle_event()`]: crate::Component::handle_event
@@ -3293,7 +3290,8 @@
 //! [`Kitty`]: https://sw.kovidgoyal.net/kitty/
 //! [`kqueue`]: https://en.wikipedia.org/wiki/Kqueue
 //! [`lock_raw()`]: crate::Monitor::lock_raw
-//! [`main_event_loop`]: crate::TerminalWindow::main_event_loop
+//! [`main_event_loop`]: crate::TerminalWindow::try_main_event_loop
+//! [`MainEventLoopFuture`]: crate::MainEventLoopFuture
 //! [`md_parser` module documentation]: crate::tui::md_parser
 //! [`mio_poller`]: crate::mio_poller
 //! [`mio`]: mio
@@ -3329,7 +3327,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`PTYMux::try_run()`]: crate::PTYMux::try_run
 //! [`PTYMux`]: crate::PTYMux
-//! [`PTYMuxBuilder::build()`]: crate::PTYMuxBuilder::build
+//! [`PTYMuxBuilder::try_build()`]: crate::PTYMuxBuilder::try_build
 //! [`PtyTestChild::drain_and_wait()`]: crate::PtyTestChild::drain_and_wait
 //! [`PtyTestContext`]: crate::PtyTestContext
 //! [`r3bl-cmdr`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/cmdr
@@ -3395,7 +3393,7 @@
 //! [`terminal_lib_backends`]: crate::terminal_lib_backends
 //! [`terminal_raw_mode`]: crate::terminal_raw_mode
 //! [`TerminalModeController`]: crate::TerminalModeController
-//! [`TerminalWindow::main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TerminalWindow::try_main_event_loop()`]: crate::tui::TerminalWindow::try_main_event_loop
 //! [`TerminationGuard`]: crate::resilient_reactor_thread::TerminationGuard
 //! [`termios`]: https://en.wikipedia.org/wiki/Termios
 //! [`test_pty_input_device`]: mod@crate::vt_100_terminal_input_parser::vt_100_parser_integration_tests::pty_input_device_test
@@ -3409,13 +3407,7 @@
 //! [`try_pan_viewport_to`]: crate::CanvasStorage::try_pan_viewport_to
 //! [`TTY`]: https://en.wikipedia.org/wiki/Tty_(Unix)
 //! [`tui/examples`]: https://github.com/r3bl-org/r3bl-open-core/tree/main/tui/examples
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
-//! [`TuiAvailability<ChooseFuture>`]: crate::TuiAvailability
-//! [`TuiAvailability<MainEventLoopFuture>`]: crate::TuiAvailability
-//! [`TuiAvailability<PTYMux>`]: crate::TuiAvailability
-//! [`TuiAvailability<ReadlineAsyncContext>`]: crate::TuiAvailability
-//! [`TuiAvailability<Spinner>`]: crate::TuiAvailability
-//! [`TuiAvailability<T>`]: crate::TuiAvailability
+//! [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 //! [`Unicode`]: https://en.wikipedia.org/wiki/Unicode
 //! [`UTF-8`]: https://en.wikipedia.org/wiki/UTF-8
 //! [`VecDeque`]: std::collections::VecDeque

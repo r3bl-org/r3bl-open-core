@@ -9,6 +9,12 @@
   - [Standardized mkosi Image Pipeline](#standardized-mkosi-image-pipeline)
   - [Host Network Isolation](#host-network-isolation)
   - [Privilege Model & Execution Safety](#privilege-model--execution-safety)
+  - [Console Backend Shim](#console-backend-shim)
+    - [Mental Model: Container vs. TTY](#mental-model-container-vs-tty)
+    - [v1 vs. v2 Scope Matrix](#v1-vs-v2-scope-matrix)
+    - [Non-Brokered Workloads (90%)](#non-brokered-workloads-90)
+    - [Persistent Console Backend (10%)](#persistent-console-backend-10)
+    - [v1 Read-Only Console Limitations](#v1-read-only-console-limitations)
   - [Unified CLI Architecture & Command Overview](#unified-cli-architecture--command-overview)
     - [Command Overview](#command-overview)
       - [1. Lifecycle & Image Management](#1-lifecycle--image-management)
@@ -180,6 +186,136 @@ isolation architecture**:
   remaining child mounts, cleans up stale container sockets in
   `/run/systemd/nspawn/unix-export/spawny-*`, and resets failed systemd scopes, ensuring
   `rm -rf` never traverses into host files.
+
+### Console Backend Shim
+
+#### Mental Model: Container vs. TTY
+
+Think of a persistent container like a **remote Linux server**, and an interactive TTY
+session like an **SSH login into that server**:
+
+```text
+┌──────────────────────────────────────────────────────────┐
+│  CONTAINER (the "server" — PID 1, files, services, net)  │
+│                                                          │
+│   ┌──────────────────────────────────────────────────┐   │
+│   │  INTERACTIVE TTY SESSION (an "SSH login")        │   │
+│   │  PTY -> bash -> vim / cargo build / gdb          │   │
+│   └──────────────────────────────────────────────────┘   │
+└──────────────────────────────────────────────────────────┘
+```
+
+- **Detached Container (`docker run -d` style — Implemented in v1)**: The **outer box**
+  (the booted guest OS) stays alive in the background under host PID 1
+  (`spawny-<distro>.service`) after `spawny` exits, even when nobody is logged in. Files
+  on disk, installed binaries, and guest `systemd` services keep running. Each
+  `spawny shell <distro>` connects to that same running container with a **fresh `bash`
+  login**.
+- **Detached Interactive TTY Session (`tmux` / `systemd-ptybrokerd` style — Planned for
+  v2)**: The **inner box** (the live `bash` + foreground process like `vim`, `cargo build`,
+  or `gdb`, or the guest's `/dev/console` prompt) stays alive when your terminal closes or
+  SSH drops, letting you reattach to the exact same live screen mid-flight without
+  `SIGHUP`. *(v1 workaround: run `spawny shell <distro>` inside a **host** `tmux` pane so
+  no extra packages are needed inside clean-room images.)*
+
+#### v1 vs. v2 Scope Matrix
+
+| Capability                                                                                | v1 (`SystemdRunReadOnly`, `systemd <= 262`)                                           | v2 (`PtyBroker`, `systemd >= 263`)            |
+| :---------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------ | :-------------------------------------------- |
+| Detached persistent container (`spawny start` / auto-boot)                                | **Implemented** — host PID 1 owns `spawny-<distro>.service` (`SIGHUP`-proof)          | **Implemented** (same `ConsoleBackend` shim)  |
+| All core commands (`run`, `script`, `shell`, `ps`, `status`, `network`, `reset`, `clean`) | **Implemented**                                                                       | **Implemented**                               |
+| Guest `systemd` PID 1 `/dev/console` PTY                                                  | **Implemented** (`--console=read-only` allocates `/dev/console`)                      | **Implemented**                               |
+| Boot console logs & automatic failure diagnostics                                         | **Implemented** (`journalctl -u spawny-<distro>.service` auto-embedded on boot error) | **Implemented**                               |
+| Interactive attach/detach to `/dev/console` (`spawny console <distro>`)                   | **Deferred to v2** (one-way read-only console; recover via `spawny clean` / `reset`)  | **Planned** via `systemd-ptybrokerd`/`ptyctl` |
+| Detachable `spawny shell` (survives SSH drop without host `tmux`)                         | **Deferred to v2** (`nsenter` + `script` tied to client terminal)                     | **Planned** via `systemd-ptybrokerd`          |
+
+#### Non-Brokered Workloads (90%)
+
+For the vast majority of `spawny` invocations, persistent/brokered PTYs are intentionally
+**not** used:
+
+1. **Automated Commands (`spawny run` & `spawny script`)**: In-container test commands
+   execute via `nsenter` over plain non-TTY OS pipes (`isatty() == false`), preserving
+   separate `stdout`/`stderr` capture, avoiding PTY `ONLCR` (`\n` -> `\r\n`) line-ending
+   translation, and guaranteeing deterministic non-interactive CI output.
+2. **Ephemeral Clean-Room Runs (`--ephemeral` / `-x`)**: Ephemeral containers require
+   strict fate-sharing with the `spawny` process via an in-process RAII supervisor guard.
+   If `spawny` exits or receives `Ctrl+C`, the ephemeral container must immediately tear
+   down and discard its CoW overlay rather than surviving detached in a background broker.
+
+#### Persistent Console Backend (10%)
+
+When `spawny` boots a **persistent** container (`spawny start <distro>`, or auto-boot
+during stateful `spawny run` / `spawny script` / `spawny shell`), the short-lived `spawny`
+CLI process exits while `systemd-nspawn -b` must continue running cleanly in the
+background without receiving `SIGHUP` on terminal teardown or `EPIPE` on closed stdio FDs.
+
+To decouple `machine.rs` from host `systemd` version churn, persistent background
+container spawning is isolated behind a `ConsoleBackend` enum shim
+(`build-infra/src/spawny/nspawn/console_backend.rs`) supporting a clean v1 -> v2 swap:
+
+- **v1 Backend (`ConsoleBackend::SystemdRunReadOnly`, `systemd <= 262`)**: Launches
+  persistent `systemd-nspawn -b` inside a transient host service unit owned by host PID 1
+  (`systemd-run --unit=spawny-<distro>.service --collect --slice=machine.slice` with
+  `Delegate=yes`, `KillMode=mixed`, and `Type=notify`) passing
+  `--keep-unit --register=yes --console=read-only`.
+    - **Why `--console=read-only` and NEVER literal `--console=pipe` with `-b`**: Per
+      `systemd-nspawn(1)`, literal `--console=pipe` (`-P`) allocates **no PTY**, omits
+      `/dev/console` inside the container altogether (breaking full `systemd` PID 1 init
+      systems), and passes raw host FDs `0/1/2` into the guest (risking `TIOCSTI` input
+      injection if a host TTY FD is passed). By contrast, `--console=read-only` (which
+      `systemd-nspawn` also selects implicitly when stdout is redirected to a non-TTY
+      pipe/file) allocates a real `/dev/console` PTY for guest PID 1 while piping all
+      console output one-way into host `journald` (`journalctl -u spawny-<distro>.service`)
+      with zero caller stdin attached:
+
+      | `--console=MODE` | Allocates PTY & `/dev/console`? | Host -> Guest stdin | Guest -> Host stdout    | Intended Use Case                         |
+      | :--------------- | :------------------------------ | :------------------ | :---------------------- | :---------------------------------------- |
+      | `interactive`    | Yes                             | Forwarded           | Forwarded               | Foreground terminal boot (default on TTY) |
+      | **`read-only`**  | **Yes**                         | **Ignored**         | **Forwarded (one-way)** | **Headless `-b` boot (v1 default)**       |
+      | `passive`        | Yes                             | Ignored             | Discarded               | Silent background container (no logs)     |
+      | `pipe` (`-P`)    | **No**                          | Raw host FD 0       | Raw host FD 1/2         | Non-`-b` single-command shell pipelines   |
+      | `autopipe`       | Only on TTY                     | Depends on TTY      | Depends on TTY          | Wrapper switching `interactive` / `pipe`  |
+    - **Zero `SIGHUP` Leaks & Unified Registration**: Host PID 1 owns the daemon lifecycle
+      independently of the invoking terminal, and `--keep-unit --register=yes` registers
+      `spawny-<distro>.service` directly with `systemd-machined` without creating a
+      redundant nested `.scope` unit.
+- **v2 Backend Seam (`ConsoleBackend::PtyBroker`, `systemd >= 263`)**: `systemd 263`
+  introduces the experimental `systemd-ptybrokerd.service` daemon (`io.systemd.PTYBroker`
+  Varlink interface + `ptyctl`), which holds PTY master FDs open independently of the
+  requesting client. Once `systemd-ptybrokerd` stabilizes across supported host
+  distributions, switching `ConsoleBackend` to `PtyBroker` upgrades persistent containers
+  from a one-way journal pipe to a live, persistent `/dev/console` PTY — unlocking
+  `spawny console <distro>` (interactive attach/detach to live container consoles without
+  stopping the container) and detachable `spawny shell <distro>` sessions without
+  installing `tmux` inside clean-room guest images.
+
+#### v1 Read-Only Console Limitations
+
+Because v1 pipes `/dev/console` one-way into `journald` with no interactive input channel,
+early-boot failures inside persistent containers have three operational constraints that
+`spawny` explicitly documents and mitigates:
+
+1. **No Interactive `/dev/console` Rescue Shell**: If a guest image fails mid-boot before
+   reaching `multi-user.target` — for example, a corrupted `.raw` image triggering
+   `systemd-fsck`, a bad `/etc/fstab` or `--bind` mount dropping guest PID 1 into
+   `emergency.target` / `rescue.target` (`sulogin` prompt on `/dev/console`), or a hung
+   early-boot unit — `/dev/console` cannot receive keystrokes. You cannot interactively
+   attach to `/dev/console` in v1 to answer boot prompts; recovery is performed via
+   `spawny clean <distro>` or `spawny reset <distro>`.
+2. **`nsenter` and `machinectl` Cannot Rescue Pre-Init Stalls**: When guest PID 1 stalls
+   in early boot, guest D-Bus / `systemd-logind` may never start (causing `machinectl`
+   readiness probes to fail), and `spawny shell` (`nsenter` as UID 1000) cannot enter a
+   fully initialized user environment.
+3. **Non-Visible Boot Output Unless Surfaced on Timeout (v1 Mitigation)**: Because console
+   output is routed to `journalctl -u spawny-<distro>.service` instead of the caller's
+   terminal, a bare `"Timeout waiting for boot"` error would hide the root cause. Whenever
+   `try_wait_for_boot()` times out or `spawny-<distro>.service` exits prematurely,
+   `spawny` automatically invokes `ConsoleBackend::try_capture_boot_journal()`
+   (`sudo journalctl -u spawny-<distro>.service -n 50 --no-pager`) and embeds the last 50
+   lines of `/dev/console` output directly into the `miette::Diagnostic` error report
+   alongside recovery hints (`sudo journalctl -u spawny-<distro>.service -e`,
+   `spawny clean <distro>`, and `spawny reset <distro>`).
 
 ### Unified CLI Architecture & Command Overview
 
@@ -529,10 +665,14 @@ operate consistently without touching host networking, and commands execute via 
       minimum floor of 1).
     - Host free disk space validation: Queries physical filesystem free space via
       `statvfs` on `/var/lib` and verifies it meets `MIN_HOST_FREE_DISK_BYTES` (20 GB).
+    - Host `systemd` version detection: Parses the host `systemd` major release number
+      (`systemd_version: u32`, e.g., `262` from `systemctl --version`) so
+      `ConsoleBackend::resolve_for_host()` can inspect host capability.
     - Concurrency validation and warning: Warns if requested concurrency exceeds hardware
       safety limits.
 - `prereqs.rs`: System requirement checks and package manager orchestrator:
-    - Validates core host utilities: `systemd-nspawn`, `machinectl`, and `mkosi`.
+    - Validates core host utilities: `systemd-nspawn`, `systemd-run`, `machinectl`, and
+      `mkosi`.
     - Uses `HostDistroFamily` to distinguish **host package managers** (`pacman`, `apt`,
       `dnf`) and generate install commands.
     - Distinguishes host package managers from **guest bootstrapping tools** (`apt` and
@@ -547,12 +687,42 @@ operate consistently without touching host networking, and commands execute via 
       NetworkManager `shared` connection or `systemd-networkd`, plus UFW forwarding rules
       for `spawny0` if host UFW is active) during `setup` and cleans it up during
       `teardown`.
+- `console_backend.rs`: Swappable persistent container console & daemonization shim:
+    - Defines
+      `#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)] pub enum ConsoleBackend` with
+      variants `#[default] SystemdRunReadOnly` (v1 default for `systemd <= 262`) and
+      `PtyBroker` (v2 seam for `systemd >= 263` `systemd-ptybrokerd` /
+      `io.systemd.PTYBroker`), paired with typed `ConsoleBackendError`
+      (`#[derive(Debug, thiserror::Error, miette::Diagnostic)]` using explicit
+      `#[source]`).
+    - Co-locates backend methods directly on `ConsoleBackend`:
+        - `pub fn resolve_for_host(systemd_version: u32) -> Self`: Returns
+          `Self::SystemdRunReadOnly` in v1 (single switch point for enabling
+          `Self::PtyBroker` in v2 once `systemd-ptybrokerd` exits experimental status).
+        - `pub fn build_persistent_boot_command(self, spec: &PersistentBootSpec<'_>) -> tokio::process::Command`:
+          In `SystemdRunReadOnly`, constructs
+          `sudo systemd-run --unit=spawny-<distro>.service --collect --slice=machine.slice --property=Delegate=yes --property=KillMode=mixed --property=Type=notify`
+          (plus `--property=CPUQuota=...` and `--property=MemoryMax=...`) wrapping
+          `systemd-nspawn -b -i <path.raw> --keep-unit --register=yes --console=read-only ...`.
+        - `pub async fn try_capture_boot_journal(self, machine_name: &str, max_lines: usize) -> Result<String, ConsoleBackendError>`:
+          Captures recent `/dev/console` output
+          (`sudo journalctl -u <machine_name>.service -n <max_lines> --no-pager`) so boot
+          hangs and early-init panics are surfaced automatically in `miette` diagnostics.
+        - `pub async fn try_attach_console(self, machine_name: &str) -> Result<(), ConsoleBackendError>`:
+          Seam for future `spawny console <distro>` (returns an actionable
+          `ConsoleBackendError::InteractiveConsoleUnsupportedInV1` diagnostic pointing to
+          `journalctl -u <machine_name>.service` in v1; delegates to `ptyctl` /
+          `io.systemd.PTYBroker` in v2).
 - `machine.rs`: Machine lifecycle state machine (`NotFound`, `Stopped`, `Running`):
-    - Unified container auto-boot (`systemd-nspawn -b -i <path.raw>`) with
-      `--network-bridge=spawny0` by default (or `--private-network` when `--offline` /
-      `--private-network` is requested), `--capability=CAP_NET_ADMIN` (enforced invariant:
-      never passed without network namespace isolation), and `--resolv-conf=copy-uplink`.
-    - Wait-for-boot polling with timeout.
+    - Unified persistent container auto-boot delegated through `ConsoleBackend`: boots
+      `systemd-nspawn -b -i <path.raw>` via
+      `ConsoleBackend::build_persistent_boot_command` with `--network-bridge=spawny0` by
+      default (or `--private-network` when `--offline` / `--private-network` is
+      requested), `--capability=CAP_NET_ADMIN` (enforced invariant: never passed without
+      network namespace isolation), and `--resolv-conf=copy-uplink`.
+    - Wait-for-boot polling with timeout: on timeout or premature unit exit, calls
+      `ConsoleBackend::try_capture_boot_journal()` and attaches the last 50 lines of guest
+      `/dev/console` journal output to the returned `miette::Diagnostic` error.
     - Process execution via `nsenter` (dropping privileges to user `tester` using
       `DEFAULT_UID_STR` and `DEFAULT_GID_STR`, running inside `--workdir`). Injects
       `HOME`, `USER`, and `PATH` via container `/usr/bin/env` to bypass host sudo
@@ -571,19 +741,21 @@ operate consistently without touching host networking, and commands execute via 
     - Container process tree inspection: queries leader PID and executes `ps f --forest`
       via `nsenter` (powers `spawny ps` and `spawny status -v`).
     - Multi-stage shutdown escalation (`poweroff` -> `terminate` -> `kill` -> `pkill -9`
-      -> scope reset).
+      -> `spawny-<distro>.service` / scope stop & `reset-failed`).
     - Defensive path validation: verifies target paths strictly match
       `/var/lib/machines/spawny-*`, `/var/lib/spawny/zygotes/*`, or
       `/run/systemd/nspawn/unix-export/spawny-*` before executing privileged removals
       (`rm -rf`).
     - Stale resource cleanup and mount safety: inspects `/proc/mounts`, unmounts lingering
       mounts, clears container sockets in `/run/systemd/nspawn/unix-export/spawny-*`, and
-      resets failed systemd scopes before any disk artifact deletion.
+      resets failed systemd units/scopes before any disk artifact deletion.
 - `zygote.rs`: Golden snapshot management:
-    - Ephemeral execution: Dispatches to `systemd-nspawn -b -x -i <image.raw>` with
+    - Ephemeral execution: Intentionally bypasses `ConsoleBackend` daemon detachment for
+      strict fate-sharing; dispatches directly to child
+      `systemd-nspawn -b -x -i <image.raw> --console=read-only` with
       `--network-bridge=spawny0` (or `--private-network` for `--offline` /
       `--private-network`), netns-isolated `--capability=CAP_NET_ADMIN`, and
-      `--resolv-conf=copy-uplink`, managed via an RAII supervisor guard.
+      `--resolv-conf=copy-uplink`, managed via an in-process RAII supervisor guard.
     - Mount-safe reset: Fast single-file Copy-on-Write restoration via `cp --reflink=auto`
       (BTRFS/XFS, `<0.01s`) or sparse copy (ext4, ~1-2s) after verifying zero active
       mounts and defensive path safety.
@@ -803,20 +975,25 @@ validation**:
       runtime sandbox execution (`systemd-nspawn`). 3. Single-file raw GPT disk image
       storage architecture (`Format=disk`, `<distro>.raw`), BTRFS CoW reflinks, and
       elimination of nested subvolume deletion issues. Ephemeral clean-room throwaway (via
-      `--ephemeral`) vs persistent sandbox execution workflows with ASCII flowcharts.
-      Privilege model and execution safety (unprivileged CLI, unconditional passwordless
-      sudo requirement via `sudo -n true`, defensive path validation, and mount safety
-      before deletion). Environment variable injection and shell independence architecture
-      (why sudo host `env_reset` strips caller environment, why `nsenter` bypasses PAM and
-      ignores `/etc/environment`, why relying on `.profile`/`.bashrc` causes fragile
-      execution failures, and how Spawny guarantees shell-agnostic determinism by
-      injecting `HOME`, `USER`, and `DEFAULT_PATH` via container `/usr/bin/env`, merging
-      user-supplied `--env` flags). Multi-distro zygote bootstrapping architecture (why
-      `mkosi` drives host-native tools `apt`, `dnf5`, and `pacman` as cross-installation
-      root unpackers to construct guest disk images without heavy VM or Docker daemons,
-      why host `apt` never touches host system files, and how build-time zygote creation
-      differs from run-time container execution). Submodule coordinator declarations and
-      public re-exports (`cli`, `constants`, `nspawn`, `runner`, `tui`).
+      `--ephemeral`) vs persistent sandbox execution workflows with ASCII flowcharts, plus
+      the `ConsoleBackend` shim architecture (why 90% of workloads use non-TTY pipes or
+      in-process RAII fate-sharing, why persistent background containers use
+      `systemd-run` + `--console=read-only` instead of `--console=pipe` in v1, early-boot
+      failure limitations and automatic `journalctl` diagnostic surfacing in v1, and the
+      v2 upgrade path to `systemd-ptybrokerd` / `spawny console`). Privilege model and
+      execution safety (unprivileged CLI, unconditional passwordless sudo requirement via
+      `sudo -n true`, defensive path validation, and mount safety before deletion).
+      Environment variable injection and shell independence architecture (why sudo host
+      `env_reset` strips caller environment, why `nsenter` bypasses PAM and ignores
+      `/etc/environment`, why relying on `.profile`/`.bashrc` causes fragile execution
+      failures, and how Spawny guarantees shell-agnostic determinism by injecting `HOME`,
+      `USER`, and `DEFAULT_PATH` via container `/usr/bin/env`, merging user-supplied
+      `--env` flags). Multi-distro zygote bootstrapping architecture (why `mkosi` drives
+      host-native tools `apt`, `dnf5`, and `pacman` as cross-installation root unpackers
+      to construct guest disk images without heavy VM or Docker daemons, why host `apt`
+      never touches host system files, and how build-time zygote creation differs from
+      run-time container execution). Submodule coordinator declarations and public
+      re-exports (`cli`, `constants`, `nspawn`, `runner`, `tui`).
 - [ ] Implement `build-infra/src/spawny/constants.rs`: Centralized constants and defaults
       organized into namespaced modules (`container_defaults` for `DEFAULT_UID`,
       `DEFAULT_UID_STR`, `DEFAULT_GID`, `DEFAULT_GID_STR`, `DEFAULT_USER`, `DEFAULT_HOME`,
@@ -858,14 +1035,16 @@ validation**:
       pipeline (Tier 1 prioritizes `ID_LIKE` tokens e.g. `ID_LIKE=arch` for CachyOS, Tier
       2 falls back to `ID` for pure upstream distros lacking `ID_LIKE`, and Tier 3 probes
       host `$PATH` for `pacman`/`apt-get`/`dnf` as defense-in-depth). Captures
-      `PRETTY_NAME` for display logs. Hardware capacity deduction (RAM from
-      `/proc/meminfo`, cores from `available_parallelism`). Free disk space validation:
-      queries `/var/lib` via `statvfs` against `MIN_HOST_FREE_DISK_BYTES` (20 GB).
+      `PRETTY_NAME` for display logs. Parses host `systemd` major version (`u32`) from
+      `systemctl --version` for `ConsoleBackend::resolve_for_host()`. Hardware capacity
+      deduction (RAM from `/proc/meminfo`, cores from `available_parallelism`). Free disk
+      space validation: queries `/var/lib` via `statvfs` against
+      `MIN_HOST_FREE_DISK_BYTES` (20 GB).
 - [ ] Implement `build-infra/src/spawny/nspawn/prereqs.rs`: Validates core host utilities:
-      `systemd-nspawn`, `machinectl`, and `mkosi`. Uses `HostDistroFamily` to distinguish
-      host package managers (`pacman`, `apt`, `dnf`) and generate install commands.
-      Distinguishes host package managers from guest bootstrapping tools (`apt` and
-      `ubuntu-keyring` for Ubuntu, `dnf5` for Fedora, `pacman` for Arch). Includes
+      `systemd-nspawn`, `systemd-run`, `machinectl`, and `mkosi`. Uses `HostDistroFamily`
+      to distinguish host package managers (`pacman`, `apt`, `dnf`) and generate install
+      commands. Distinguishes host package managers from guest bootstrapping tools (`apt`
+      and `ubuntu-keyring` for Ubuntu, `dnf5` for Fedora, `pacman` for Arch). Includes
       comprehensive rustdocs explaining why `apt` + `ubuntu-keyring` and `dnf5` are
       required on non-Debian/non-Fedora hosts (e.g. CachyOS): `mkosi` invokes them as
       cross-installation unpackers (`-o RootDir=...`, `--installroot=...`) to assemble
@@ -898,34 +1077,63 @@ validation**:
       distributions, image paths (`/var/lib/spawny/zygotes/<distro>.raw` and
       `/var/lib/machines/spawny-<distro>.raw`), and machine name mappings. Generates
       unique machine instance IDs for ephemeral runs (`spawny-ephemeral-<distro>-<uuid>`).
-- [ ] Implement `build-infra/src/spawny/nspawn/machine.rs`: Container auto-boot
-      (`systemd-nspawn -b -i <path.raw>`) with `--network-bridge=spawny0` by default (or
-      `--private-network` when `--offline` / `--private-network` is requested),
-      `--capability=CAP_NET_ADMIN` (enforced invariant: never granted without network
-      namespace isolation), and `--resolv-conf=copy-uplink`. Dynamically applies resource
-      limits via `--property=CPUQuota=...` and `--property=MemoryMax=...`. Manages host
-      `spawny0` NAT bridge setup/teardown lifecycle. Wait-for-boot readiness polling with
-      timeout. Process execution via `nsenter` (dropping privileges using
+- [ ] Implement `build-infra/src/spawny/nspawn/console_backend.rs`: Defines
+      `#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)] pub enum ConsoleBackend { #[default] SystemdRunReadOnly, PtyBroker }`,
+      `PersistentBootSpec<'a>`, and `ConsoleBackendError`
+      (`#[derive(Debug, thiserror::Error, miette::Diagnostic)]` with explicit
+      `#[source]`). Implements
+      `ConsoleBackend::resolve_for_host(systemd_version: u32) -> Self` (v1 returns
+      `SystemdRunReadOnly`),
+      `ConsoleBackend::build_persistent_boot_command(self, spec: &PersistentBootSpec<'_>) -> tokio::process::Command`
+      (spawning
+      `sudo systemd-run --unit=spawny-<distro>.service --collect --slice=machine.slice --property=Delegate=yes --property=KillMode=mixed --property=Type=notify`
+      wrapping
+      `systemd-nspawn -b -i <path.raw> --keep-unit --register=yes --console=read-only ...`),
+      `ConsoleBackend::try_capture_boot_journal(self, machine_name: &str, max_lines: usize) -> Result<String, ConsoleBackendError>`
+      (`sudo journalctl -u <machine_name>.service -n <max_lines> --no-pager`), and the v2
+      `ConsoleBackend::try_attach_console(self, machine_name: &str) -> Result<(), ConsoleBackendError>`
+      seam. Includes comprehensive module rustdocs explaining: (a) the detached container
+      vs. detached interactive TTY session mental model and v1/v2 capability boundary,
+      (b) why literal `--console=pipe` breaks `systemd-nspawn -b` (omits `/dev/console`
+      and exposes raw FDs / `TIOCSTI`), (c) v1 `--console=read-only` failure modes when a
+      guest stalls in early boot (`sulogin` / `emergency.target` / `fsck` lacking console
+      stdin, `nsenter`/`machinectl` inability to rescue pre-init stalls), and (d) how v2
+      (`systemd >= 263` `systemd-ptybrokerd` / `io.systemd.PTYBroker` + `ptyctl`) swaps
+      into this exact enum to enable live `spawny console <distro>` attach/detach.
+- [ ] Implement `build-infra/src/spawny/nspawn/machine.rs`: Persistent container auto-boot
+      delegated through `ConsoleBackend::build_persistent_boot_command()`
+      (`systemd-nspawn -b -i <path.raw> --keep-unit --register=yes --console=read-only`)
+      with `--network-bridge=spawny0` by default (or `--private-network` when `--offline`
+      / `--private-network` is requested), `--capability=CAP_NET_ADMIN` (enforced
+      invariant: never granted without network namespace isolation), and
+      `--resolv-conf=copy-uplink`. Dynamically applies resource limits via
+      `--property=CPUQuota=...` and `--property=MemoryMax=...` on the `systemd-run`
+      transient service unit. Manages host `spawny0` NAT bridge setup/teardown lifecycle.
+      Wait-for-boot readiness polling with timeout: on timeout or premature unit failure,
+      invokes `ConsoleBackend::try_capture_boot_journal()` and embeds the captured
+      `/dev/console` tail + `journalctl` / `clean` / `reset` recovery hints in the
+      `miette` diagnostic. Process execution via `nsenter` (dropping privileges using
       `DEFAULT_UID_STR` and `DEFAULT_GID_STR` from `constants::container_defaults`,
       injecting `HOME`, `USER`, and `DEFAULT_PATH` via container `/usr/bin/env`, working
       in `--workdir`). Interactive shell with internal PTY wrapper
       (`/usr/bin/script -q /dev/null -c "/bin/bash --login"`). Displays entry banner with
       exit instructions (`exit` / `Ctrl+D`) and command cancel (`Ctrl+C`). Multi-stage
-      shutdown escalation (`poweroff` -> `terminate` -> `kill` -> `pkill -9` -> scope
-      reset). Defensive path validation: verifies target paths strictly match
-      `/var/lib/machines/spawny-*`, `/var/lib/spawny/zygotes/*`, or
-      `/run/systemd/nspawn/unix-export/spawny-*` before executing privileged removals
-      (`rm -rf`). Mount safety: inspects `/proc/mounts`, cleanly unmounts lingering child
-      mounts, clears container sockets in `/run/systemd/nspawn/unix-export/spawny-*`, and
-      resets failed scopes before deletion. Includes comprehensive rustdocs documenting
-      the lifecycle of UNIX runtime sockets, why abrupt process termination leaves
-      lingering mounts, and how `validate_deletion_path` prevents catastrophic host
-      deletion.
-- [ ] Implement `build-infra/src/spawny/nspawn/zygote.rs`: Ephemeral execution: dispatches
-      to `systemd-nspawn -b -x -i <image.raw>` with `--network-bridge=spawny0` (or
-      `--private-network` when `--offline` / `--private-network` is provided),
-      netns-isolated `--capability=CAP_NET_ADMIN`, and `--resolv-conf=copy-uplink`
-      (including resource limits `--property=CPUQuota=...` and
+      shutdown escalation (`poweroff` -> `terminate` -> `kill` -> `pkill -9` ->
+      `spawny-<distro>.service` & scope stop / `reset-failed`). Defensive path validation:
+      verifies target paths strictly match `/var/lib/machines/spawny-*`,
+      `/var/lib/spawny/zygotes/*`, or `/run/systemd/nspawn/unix-export/spawny-*` before
+      executing privileged removals (`rm -rf`). Mount safety: inspects `/proc/mounts`,
+      cleanly unmounts lingering child mounts, clears container sockets in
+      `/run/systemd/nspawn/unix-export/spawny-*`, and resets failed units/scopes before
+      deletion. Includes comprehensive rustdocs documenting the lifecycle of UNIX runtime
+      sockets, why abrupt process termination leaves lingering mounts, and how
+      `validate_deletion_path` prevents catastrophic host deletion.
+- [ ] Implement `build-infra/src/spawny/nspawn/zygote.rs`: Ephemeral execution: bypasses
+      `ConsoleBackend` daemon detachment for strict fate-sharing and dispatches directly
+      to child `systemd-nspawn -b -x -i <image.raw> --console=read-only` with
+      `--network-bridge=spawny0` (or `--private-network` when `--offline` /
+      `--private-network` is provided), netns-isolated `--capability=CAP_NET_ADMIN`, and
+      `--resolv-conf=copy-uplink` (including resource limits `--property=CPUQuota=...` and
       `--property=MemoryMax=...`), managed via an RAII supervisor guard. Mount-safe reset:
       fast single-file Copy-on-Write restoration via `cp --reflink=auto` (BTRFS/XFS,
       `<0.01s`) or sparse copy (ext4, ~1-2s) after mount safety and defensive path checks.
@@ -934,11 +1142,12 @@ validation**:
       permissions on scripts (or uses `--config-dir` override), invokes `mkosi` with
       profile arguments and `--runtime-size=<disk-size>`, and saves output to
       `/var/lib/spawny/zygotes/<distro>.raw`.
-- [ ] Add unit tests for distro mapping, hardware capacity calculations, and state
-      transitions.
+- [ ] Add unit tests for distro mapping, hardware capacity calculations, `ConsoleBackend`
+      `systemd-run` command construction, and state transitions.
 - [ ] **Mandatory manual review:** Verify every file modified in this phase for correct
       implementation and ensure no regressions.
     - [ ] `build-infra/src/spawny/nspawn/distro.rs`
+    - [ ] `build-infra/src/spawny/nspawn/console_backend.rs`
     - [ ] `build-infra/src/spawny/nspawn/machine.rs`
     - [ ] `build-infra/src/spawny/nspawn/zygote.rs`
     - [ ] `build-infra/src/spawny/nspawn/image_builder.rs`
@@ -1191,4 +1400,4 @@ validation**:
 <!-- cspell:words postinst Rootfs machinectl nsenter debootstrap userland sysusers -->
 <!-- cspell:words reflink Reflink procs overlayfs Passwordless poweroff passwordless chrooted -->
 <!-- cspell:words resolv chrooted reflinks eperm statvfs ttyname nopasswd cachyos installroot -->
-<!-- cspell:words netns mdns llmnr avahi operstate spawny -->
+<!-- cspell:words netns mdns llmnr avahi operstate spawny ptybrokerd ptyctl varlink sulogin journald onlcr autopipe tiocsti -->

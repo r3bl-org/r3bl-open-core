@@ -1,6 +1,6 @@
 // Copyright (c) 2025 R3BL LLC. Licensed under Apache License, Version 2.0.
 
-use r3bl_tui::{DefaultIoDevices, InlineString, TuiAvailabilityChooseExt, TuiColor,
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, InlineString, TuiColor,
                assert_terminal_is_interactive, cli_text_inline, new_style, ok,
                readline_async::{HowToChoose, StyleSheet},
                run_in_main_with_safe_stack, try_choose, try_get_size, vp_height,
@@ -89,7 +89,7 @@ async fn try_main_impl() -> miette::Result<()> {
             StyleSheet::default(),
             io_devices.as_mut_tuple(),
         )
-        .get_first_result()
+        .try_get_first_choice()
         .await?;
 
         let Some(user_choice) = maybe_user_choice else {

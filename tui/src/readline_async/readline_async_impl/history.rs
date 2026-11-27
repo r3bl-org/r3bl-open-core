@@ -20,16 +20,12 @@ use std::collections::VecDeque;
 /// # Example Usage
 ///
 /// ```no_run
-/// use r3bl_tui::{readline_async::ReadlineAsyncContext, IntoErr, ReadlineEvent,
-///     TuiAvailability, ok};
+/// use r3bl_tui::{readline_async::ReadlineAsyncContext, ReadlineEvent, ok};
 ///
 /// #[tokio::main]
 /// async fn main() -> miette::Result<()> {
 ///     // 1. Initialize the async readline context.
-///     let mut ctx = match ReadlineAsyncContext::try_new(Some("> "), None).await {
-///         TuiAvailability::Available(ctx) => ctx,
-///         it => return it.into_err(),
-///     };
+///     let mut ctx = ReadlineAsyncContext::try_new(Some("> "), None).await?;
 ///
 ///     // 2. Read lines in an event loop.
 ///     loop {

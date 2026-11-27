@@ -83,17 +83,13 @@
 //! ## Quick Start
 //!
 //! ```no_run
-//! use r3bl_tui::{readline_async::ReadlineAsyncContext, IntoErr, ReadlineEvent,
-//!     TuiAvailability, rla_println, ok};
+//! use r3bl_tui::{readline_async::ReadlineAsyncContext, ReadlineEvent, rla_println, ok};
 //! use std::io::Write;
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
 //!     // 1. Create context ONCE before entering the loop:
-//!     let mut ctx = match ReadlineAsyncContext::try_new(Some("> "), None).await {
-//!         TuiAvailability::Available(ctx) => ctx,
-//!         it => return it.into_err(),
-//!     };
+//!     let mut ctx = ReadlineAsyncContext::try_new(Some("> "), None).await?;
 //!
 //!     // 2. Clone writer into background tasks:
 //!     let mut writer = ctx.clone_shared_writer();
@@ -345,7 +341,7 @@
 //!
 //! ```
 //! use r3bl_tui::readline_async::ReadlineAsyncContext;
-//! use r3bl_tui::{fg_magenta, CliTextInline, ok, IntoErr, TuiAvailability};
+//! use r3bl_tui::{fg_magenta, CliTextInline, ok};
 //!
 //! pub async fn sample() -> Result<(), Box<dyn std::error::Error>> {
 //!     let prompt = {
@@ -355,10 +351,7 @@
 //!         let prompt_seg_3 = fg_magenta("╮").bg_dark_gray().to_string();
 //!         Some(format!("{}{}{} ", prompt_seg_1, prompt_seg_2, prompt_seg_3))
 //!     };
-//!     let mut rl_ctx = match ReadlineAsyncContext::try_new(prompt, None).await {
-//!         TuiAvailability::Available(rl_ctx) => rl_ctx,
-//!         it => return it.into_err()?,
-//!     };
+//!     let mut _rl_ctx = ReadlineAsyncContext::try_new(prompt, None).await?;
 //!     ok!()
 //! }
 //! ```

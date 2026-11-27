@@ -5,7 +5,8 @@ use crate::{Ansi256GradientIndex, BoxedSafeApp, ColorWheel, ColorWheelConfig,
             DEBUG_TUI, INFO_DISPLAY_LOG_TELEMETRY, DefaultInputEventHandler, DefaultSize,
             DefaultTiming, EventPropagation, FlushKind, GCStringOwned, GetMemSize,
             GlobalData, GradientGenerationPolicy, HasFocus, InputDevice, InputEvent,
-            LockedOutputDevice, MainEventLoopFuture, MinSize, OfsBufPool, OutputDevice,
+            LockedOutputDevice, MainEventLoopError, MainEventLoopFuture, MinSize,
+            OfsBufPool, OutputDevice,
             PaintMode, PaintRenderOpImplCrossterm, RenderOpCommon, RenderOpFlush,
             RenderOpIR, SufficientSize, Telemetry, TelemetryAtomHint,
             TerminalModeController, TerminalWindowMainThreadSignal,
@@ -22,7 +23,7 @@ use tokio::sync::mpsc;
 /// Main event loop implementation that handles terminal UI events and app state
 /// management.
 ///
-/// This is the internal API, and not the public API [`main_event_loop()`]. This
+/// This is the internal API, and not the public API [`try_main_event_loop()`]. This
 /// separation exists to allow for testing using dependency injection.
 ///
 /// This function takes pre-initialized components (terminal size, input/output devices)
@@ -42,17 +43,16 @@ use tokio::sync::mpsc;
 ///
 /// # Returns
 ///
-/// Returns a [`MainEventLoopFuture`] that resolves to a [`miette::Result`] containing:
+/// Returns a [`MainEventLoopFuture`] that resolves to a [`Result`] containing:
 /// * `global_data` - The final [`GlobalData`] state after the event loop exits.
 /// * `event_stream` - The [`InputDevice`] used for input events.
 /// * [`stdout`] - The [`OutputDevice`] used for output.
 ///
 /// # Errors
 ///
-/// Returns [`miette::Error`] if there are errors during:
-/// * Event loop initialization (setting up raw mode, app initialization).
-/// * Event loop execution (input processing, rendering, signal handling).
-/// * Terminal cleanup and restoration.
+/// Returns [`MainEventLoopError`] if there are errors during:
+/// * Enabling raw mode ([`MainEventLoopError::RawMode`]).
+/// * Full-screen TUI mode setup ([`MainEventLoopError::FullScreenSetup`]).
 ///
 /// # Why return a pinned boxed future?
 ///
@@ -142,12 +142,11 @@ use tokio::sync::mpsc;
 ///   heap so it can never be moved to a different heap address.
 ///
 /// [`App`]: crate::tui::App
-/// [`main_event_loop()`]: crate::tui::TerminalWindow::main_event_loop()
 /// [`Pin<Box<T>>`]: std::boxed::Box::pin
 /// [`Pin`]: std::pin::Pin
 /// [`select!`]: tokio::select
 /// [`stdout`]: std::io::stdout
-/// [`TerminalWindow::main_event_loop`]: crate::tui::TerminalWindow::main_event_loop
+/// [`try_main_event_loop()`]: crate::tui::TerminalWindow::try_main_event_loop
 /// [`Unpin`]: std::marker::Unpin
 pub fn try_main_event_loop_impl<S, AS>(
     app: BoxedSafeApp<S, AS>,
@@ -166,13 +165,19 @@ where
 
         // Start raw mode.
         let _raw_mode_guard = if matches!(output_device.paint_mode, PaintMode::Real) {
-            Some(output_device.enter_raw_mode()?)
+            Some(
+                output_device
+                    .enter_raw_mode()
+                    .map_err(MainEventLoopError::RawMode)?,
+            )
         } else {
             None
         };
 
         // Start full screen TUI mode.
-        let _fullscreen_tui_mode_guard = output_device.try_setup_full_screen_tui()?;
+        let _fullscreen_tui_mode_guard = output_device
+            .try_setup_full_screen_tui()
+            .map_err(MainEventLoopError::FullScreenSetup)?;
 
         let event_loop_state = EventLoopState::initialize(
             state,

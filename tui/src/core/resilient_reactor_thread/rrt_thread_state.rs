@@ -68,7 +68,7 @@ use super::{InterruptHandle, RRTWorker, StopReason};
 /// [`Stopping`]: ThreadState::Stopping
 /// [`ThreadLifecycleMonitor`]: super::ThreadLifecycleMonitor
 /// [`tokio`]: tokio
-/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 /// [software interrupt handle]: crate::RRTSoftwareInterrupt
 /// [Typestate Pattern]:
 ///     https://docs.rust-embedded.org/book/static-guarantees/typestate-programming.html
@@ -96,7 +96,7 @@ pub enum ThreadState<W: RRTWorker> {
     /// [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
     /// [`Running`]: ThreadState::Running
     /// [`try_subscribe()`]: crate::RRT::try_subscribe
-    /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+    /// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
     /// [lock for the `state`]: super::ThreadLifecycleMonitor::lock()
     Stopped,
 
@@ -125,7 +125,7 @@ pub enum ThreadState<W: RRTWorker> {
     /// [`Running`]: ThreadState::Running
     /// [`Stopped`]: ThreadState::Stopped
     /// [`try_subscribe()`]: crate::RRT::try_subscribe
-    /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+    /// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
     /// [lock for the `state`]: super::ThreadLifecycleMonitor::lock()
     Starting,
 
@@ -188,7 +188,7 @@ pub enum ThreadState<W: RRTWorker> {
     /// [`ThreadLifecycleMonitor::interrupt_if_running()`]:
     ///     super::ThreadLifecycleMonitor::interrupt_if_running
     /// [`try_subscribe()`]: crate::RRT::try_subscribe
-    /// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+    /// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
     /// [cleanup guard]: crate::resilient_reactor_thread::TerminationGuard
     /// [lock for the `state`]: super::ThreadLifecycleMonitor::lock()
     /// [software interrupt handle]: crate::RRTSoftwareInterrupt

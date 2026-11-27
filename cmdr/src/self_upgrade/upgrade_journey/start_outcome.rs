@@ -162,7 +162,7 @@ impl DeferredUpgradeOutcome {
     ///
     /// When executing logic that runs on exit using
     /// [`StdThreadTokioRunner::run_blocking`][2], after a TUI application (like `giti` or
-    /// `edi`) is exiting, the main UI loop ([`TerminalWindow::main_event_loop`],
+    /// `edi`) is exiting, the main UI loop ([`TerminalWindow::try_main_event_loop`],
     /// [`ReadlineAsyncContext`], or [`try_choose`]) has already dropped its [RAII] guards
     /// and restored the terminal from [raw mode] back to [cooked mode]. We have designed
     /// it this way so that the following can work interoperably with full TUI apps:
@@ -175,7 +175,7 @@ impl DeferredUpgradeOutcome {
     /// [2]: r3bl_tui::StdThreadTokioRunner::run_blocking
     /// [`ReadlineAsyncContext`]: r3bl_tui::ReadlineAsyncContext
     /// [`Spinner`]: r3bl_tui::Spinner
-    /// [`TerminalWindow::main_event_loop`]: r3bl_tui::TerminalWindow::main_event_loop
+    /// [`TerminalWindow::try_main_event_loop`]: r3bl_tui::TerminalWindow::try_main_event_loop
     /// [`ThreadRunnerError::RuntimeInitFailed`]: crate::self_upgrade::ThreadRunnerError::RuntimeInitFailed
     /// [`ThreadRunnerError::ThreadPanicked`]: crate::self_upgrade::ThreadRunnerError::ThreadPanicked
     /// [`try_choose`]: r3bl_tui::try_choose

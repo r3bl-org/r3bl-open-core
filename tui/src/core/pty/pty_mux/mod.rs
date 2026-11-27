@@ -100,19 +100,15 @@
 //! # Usage Example
 //!
 //! ```no_run
-//! use r3bl_tui::{TuiAvailability, IntoErr, PTYMux, ok};
+//! use r3bl_tui::{PTYMux, ok};
 //!
 //! #[tokio::main]
 //! async fn main() -> miette::Result<()> {
-//!     let multiplexer = match PTYMux::builder()
+//!     let multiplexer = PTYMux::builder()
 //!         .add_process("bash", "bash", vec![])
 //!         .add_process("editor", "nvim", vec![])
 //!         .add_process("monitor", "htop", vec![])
-//!         .build()
-//!     {
-//!         TuiAvailability::Available(mux) => mux,
-//!         it => return it.into_err(),
-//!     };
+//!         .try_build()?;
 //!
 //!     multiplexer.try_run().await?;  // F1/F2/F3 to switch, Ctrl+Q to quit
 //!     ok!()
@@ -143,7 +139,7 @@
 //! [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
 //! [`readline_async`]: crate::readline_async::ReadlineAsyncContext::try_new
 //! [`truecolor`]: https://en.wikipedia.org/wiki/Color_depth#True_color_(24-bit)
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 //! [`types.rs`]: crate::CanvasStorage
 //! [`VecDeque`]: std::collections::VecDeque
 //! [`VT-100`]: https://vt100.net/docs/vt100-ug/chapter3.html

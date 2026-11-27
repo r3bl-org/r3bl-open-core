@@ -245,7 +245,7 @@ pub const UTF8_MOUSE_EXTENSION: u16 = 1005;
 /// When enabled, mouse interactions send special escape sequences to the application,
 /// allowing interactive mouse support in [`TUI`] applications.
 ///
-/// [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+/// [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 /// [`xterm private mode 1003`]: https://invisible-island.net/xterm/ctlseqs/ctlseqs.html
 pub const APPLICATION_MOUSE_TRACKING: u16 = 1003;
 

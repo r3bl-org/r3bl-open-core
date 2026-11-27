@@ -188,12 +188,12 @@ Section 2:
         - **`*Error`**: _What went wrong when a fallible step failed?_ (Typed struct/enum
           returned in `Err(...)` for programmatic matching and cause chains).
         - **`*Result`**: _Did this fallible call succeed or fail?_ (Reserved exclusively
-          for `std::result::Result<T, E>` or thin aliases like `CommonResult<T>`; omit
-          `Result` altogether when infallible. Pair fallible free functions and inherent
-          methods with a `try_` prefix such as `try_get_workspace_root` or
-          `try_from_seed_file` so fallibility is visible at every call site, reserving
-          unprefixed names for infallible calls, `main`, traits, and unconditional `Err`
-          constructors).
+          for `std::result::Result<T, E>` or thin aliases like `miette::Result<T>` /
+          `FsOpResult<T>`; omit `Result` altogether when infallible. Pair fallible free
+          functions and inherent methods with a `try_` prefix such as
+          `try_get_workspace_root` or `try_from_seed_file` so fallibility is visible at
+          every call site, reserving unprefixed names for infallible calls, `main`,
+          traits, and unconditional `Err` constructors).
         - **`*Outcome`**: _What structured domain state did an executed operation produce
           for downstream code?_ (Unformatted domain enum or struct inspected by callers).
         - **`*Report`**: _What formatted diagnostic or summary artifact crosses an
@@ -219,7 +219,7 @@ links into `r3bl-open-core`:
           `Error::source()`, distinguishes failure domains, and insulates public APIs from
           dependency updates.
         - **Multi-variant enum (2+ modes):** `DownloadFileError` in
-          `tui/src/core/script/download.rs`, `WorkspaceRootError` in
+          `tui/src/core/script/download.rs`, `GetWorkspaceRootError` in
           `build-infra/src/common/workspace_utils.rs`, and `McpServerError` in
           `rust-analyzer-mcp-server/src/error.rs` (paired with JSON-RPC error mapping in
           `rust-analyzer-mcp-server/src/mcp/server.rs`).
@@ -234,7 +234,7 @@ links into `r3bl-open-core`:
     - Compare omitting both attributes (cause chain disappears unless a field is named
       `source`) vs. keeping `#[source]` without `#[from]` (identical diagnostics and cause
       chains, explicit `.map_err(...)` at call sites).
-    - Show side-by-side code from `WorkspaceRootError` (`r3bl-build-infra`) and
+    - Show side-by-side code from `GetWorkspaceRootError` (`r3bl-build-infra`) and
       `DownloadFileError` (`r3bl_tui`) illustrating call-site clarity, zero duplicate
       `From<std::io::Error>` / `From<reqwest::Error>` collisions, intentional mapping
       during refactors, and uniform syntax across single-field and context-carrying
@@ -251,7 +251,9 @@ links into `r3bl-open-core`:
           replacing a positional `(Result<T, E>, Command)` tuple with named
           `{ result, command }` fields.
         - `CommandRunReport<T>` (`command_run_report.rs`) formatting `Noop | Run | Fail`
-          for display and `tracing` output (`CommonResult<CommandRunReport<Details>>`).
+          for display and `tracing` output
+          (`Result<CommandRunReport<Details>, GitiBranchError>`, converted to
+          `miette::Report` strictly in `cmdr/src/bin/giti.rs`).
     - Show `StartOutcome` in `cmdr/src/self_upgrade/upgrade_journey/start_outcome.rs` as a
       domain state-machine `*Outcome`, and show returning bare `T` on infallible helpers.
 4. **Subsection 4.4: System Edges Across Servers, Subcommands, Apps & Dyn Traits**

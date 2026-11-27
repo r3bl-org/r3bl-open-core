@@ -45,7 +45,7 @@ async fn try_main_impl() -> miette::Result<()> {
                     String::new(),
                     AnalyticsAction::EdiFileNew,
                 );
-                launcher::run_app(None).await?;
+                launcher::try_run_app(None).await?;
             }
             1 => {
                 report_analytics::start_task_to_generate_event(
@@ -53,7 +53,7 @@ async fn try_main_impl() -> miette::Result<()> {
                     AnalyticsAction::EdiFileOpenSingle,
                 );
                 let maybe_file_path = Some(cli_arg.file_paths[0].as_str());
-                launcher::run_app(maybe_file_path).await?;
+                launcher::try_run_app(maybe_file_path).await?;
             }
             _ => {
                 if let Some(ref file_path) =
@@ -63,7 +63,7 @@ async fn try_main_impl() -> miette::Result<()> {
                         String::new(),
                         AnalyticsAction::EdiFileOpenMultiple,
                     );
-                    launcher::run_app(Some(file_path)).await?;
+                    launcher::try_run_app(Some(file_path)).await?;
                 }
             }
         }

@@ -1,8 +1,8 @@
 // Copyright (c) 2026 R3BL LLC. Licensed under Apache License, Version 2.0.
 
 use super::ui_strings;
-use r3bl_tui::{DefaultIoDevices, HowToChoose, StyleSheet, TerminalInteractiveStatus,
-            TuiAvailabilityChooseExt, check_is_terminal_interactive, cli_text_inline,
+use r3bl_tui::{ChooseFutureExt, DefaultIoDevices, HowToChoose, StyleSheet,
+            TerminalInteractiveStatus, check_is_terminal_interactive, cli_text_inline,
             cli_text_line, new_style, try_choose, vp_height};
 use smallvec::smallvec;
 
@@ -91,7 +91,7 @@ pub async fn prompt_user_to_upgrade(
         StyleSheet::default(),
         io.as_mut_tuple(),
     )
-    .get_first_result()
+    .try_get_first_choice()
     .await
     .ok()
     .flatten();

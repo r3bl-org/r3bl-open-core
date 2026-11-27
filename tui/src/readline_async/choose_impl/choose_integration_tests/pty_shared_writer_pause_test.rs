@@ -25,10 +25,10 @@
 //! [`try_choose()`]: crate::try_choose
 //! [raw mode]: mod@crate::terminal_raw_mode#raw-mode-vs-cooked-mode
 
-use crate::{ChannelCapacity, Header, InputDevice, MSG_CONTROLLED_READY, MSG_LINE_PREFIX,
-            MSG_SUCCESS, ModalTerminalGuard, OutputDevice, PtyTestContext, PtyTestMode,
-            Readline, TuiAvailabilityChooseExt, generate_keyboard_sequence, try_choose,
-            vp_height, vp_width,
+use crate::{ChannelCapacity, ChooseFutureExt, Header, InputDevice, MSG_CONTROLLED_READY,
+            MSG_LINE_PREFIX, MSG_SUCCESS, ModalTerminalGuard, OutputDevice,
+            PtyTestContext, PtyTestMode, Readline, generate_keyboard_sequence,
+            try_choose, vp_height, vp_width,
             vt_100_terminal_input_parser::{VT100InputEventIR, VT100KeyCodeIR,
                                            VT100KeyModifiersIR}};
 use std::io::Write;
@@ -153,7 +153,7 @@ fn controlled() {
                 crate::readline_async::StyleSheet::default(),
                 guard.as_mut_tuple(),
             )
-            .get_first_result()
+            .try_get_first_choice()
             .await;
         }
 

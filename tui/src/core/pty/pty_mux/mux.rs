@@ -11,23 +11,52 @@ use super::{MAX_PROCESSES, OUTPUT_POLL_INTERVAL_MS, OutputRenderer, Process,
             ProcessManager, STATUS_BAR_UPDATE_INTERVAL_MS, input_router};
 use crate::{AdaptiveRenderResult::{Render, Skip},
             Budget, Continuation, DEBUG_PTY_MUX, EventPropagation, InputEvent, PtyError,
-            RawModeError, TerminalInteractiveStatus, TerminalIoError, TerminalSizeError,
-            TuiAvailability, VPSize, VPWidth,
+            RawModeError, TerminalIoError, TerminalNotInteractiveReason,
+            TerminalSizeError, VPSize, VPWidth,
             ansi_output::{cursor_movement::cursor_position,
                           screen_clearing::clear_screen},
-            core::{check_is_terminal_interactive, emit_stderr_redirection_disclaimer,
+            core::{emit_stderr_redirection_disclaimer,
                    osc::OscSender,
                    terminal_io::{InputDevice, OutputDevice, TerminalModeController},
-                   try_get_size},
+                   try_ensure_terminal_interactive, try_get_size},
             vp_col, vp_row};
 use std::{fmt::Debug,
           thread::sleep,
           time::{Duration, Instant}};
 use tokio::time::interval;
 
-/// Error returned by [`PTYMux`] startup and execution operations.
+/// Error returned by [`PTYMux`] builder, startup, and execution operations.
 #[derive(Debug, thiserror::Error, miette::Diagnostic)]
 pub enum PtyMuxError {
+    /// Builder had zero processes configured when [`PTYMuxBuilder::try_build`] was called.
+    #[error("At least one process must be configured")]
+    NoProcessesConfigured,
+
+    /// Builder exceeded [`MAX_PROCESSES`] when [`PTYMuxBuilder::try_build`] was called.
+    #[error("Maximum of {max} processes allowed (got {count})")]
+    TooManyProcesses {
+        /// Number of processes configured on the builder.
+        count: usize,
+        /// Maximum supported process count ([`MAX_PROCESSES`]).
+        max: usize,
+    },
+
+    /// Terminal streams ([`stdin`] / [`stdout`]) are not interactive.
+    ///
+    /// [`stdin`]: std::io::stdin
+    /// [`stdout`]: std::io::stdout
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    NotInteractive(TerminalNotInteractiveReason),
+
+    /// Failed to query the terminal window dimensions.
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    TerminalSize(TerminalSizeError),
+
+    /// Failed to spawn a configured child [`PTY`] process.
+    ///
+    /// [`PTY`]: https://en.wikipedia.org/wiki/Pseudoterminal
     #[error("Failed to start PTY process '{process_name}' ({command})")]
     ProcessStartFailed {
         process_name: String,
@@ -52,8 +81,8 @@ pub enum PtyMuxError {
 /// processes to spawn, define the virtual terminal size, and attach an optional
 /// [`InputInterceptorFn`] to handle global hotkeys.
 ///
-/// Once configuration is complete, call [`build()`] to construct the actual [`PTYMux`]
-/// engine.
+/// Once configuration is complete, call [`try_build()`] to construct the actual
+/// [`PTYMux`] engine.
 ///
 /// # Examples
 ///
@@ -65,7 +94,7 @@ pub enum PtyMuxError {
 ///     .add_process("bash", "bash", vec![]);
 /// ```
 ///
-/// [`build()`]: PTYMuxBuilder::build
+/// [`try_build()`]: PTYMuxBuilder::try_build
 #[derive(Default)]
 pub struct PTYMuxBuilder {
     process_configs: Vec<(String, String, Vec<String>)>,
@@ -162,92 +191,64 @@ mod impl_pty_mux_builder {
 
         /// Builds the [`PTYMux`] instance.
         ///
-        /// # Returns
-        ///
-        /// Returns a [`TuiAvailability`] containing the [`PTYMux`] instance if the
-        /// terminal is interactive. This explicitly represents all possible states:
-        /// - [`Available`]: Terminal is interactive and initialization succeeded. Returns
-        ///   the multiplexer.
-        /// - [`NotAvailable`]: Terminal is not interactive.
-        /// - [`Broken`]: Initialization failed.
-        ///
         /// # Errors
         ///
-        /// Returns a [`Broken`] variant containing a [`miette::Report`] if:
-        /// - No processes are configured
+        /// Returns [`PtyMuxError`] if:
+        /// - No processes are configured ([`PtyMuxError::NoProcessesConfigured`]).
         /// - More than [`MAX_PROCESSES`] processes are configured
-        /// - Fails to get the terminal size when not explicitly provided
+        ///   ([`PtyMuxError::TooManyProcesses`]).
+        /// - Terminal streams are not interactive ([`PtyMuxError::NotInteractive`]).
+        /// - Terminal dimensions cannot be queried when not explicitly provided
+        ///   ([`PtyMuxError::TerminalSize`]).
         ///
-        /// [`Available`]: TuiAvailability::Available
-        /// [`Broken`]: TuiAvailability::Broken
-        /// [`check_is_terminal_interactive()`]: crate::check_is_terminal_interactive
         /// [`MAX_PROCESSES`]: super::MAX_PROCESSES
-        /// [`NotAvailable`]: TuiAvailability::NotAvailable
-        #[must_use]
-        pub fn build(self) -> TuiAvailability<PTYMux> {
+        pub fn try_build(self) -> Result<PTYMux, PtyMuxError> {
             if self.process_configs.is_empty() {
-                return TuiAvailability::Broken(miette::miette!(
-                    "At least one process must be configured"
-                ));
+                return Err(PtyMuxError::NoProcessesConfigured);
             }
 
             if self.process_configs.len() > MAX_PROCESSES {
-                return TuiAvailability::Broken(miette::miette!(
-                    "Maximum of {} processes allowed",
-                    MAX_PROCESSES
-                ));
+                return Err(PtyMuxError::TooManyProcesses {
+                    count: self.process_configs.len(),
+                    max: MAX_PROCESSES,
+                });
             }
 
-            match check_is_terminal_interactive() {
-                TerminalInteractiveStatus::NotAvailable(reason) => {
-                    TuiAvailability::NotAvailable(reason)
-                }
+            try_ensure_terminal_interactive().map_err(PtyMuxError::NotInteractive)?;
 
-                TerminalInteractiveStatus::Available => {
-                    let init = || -> Result<PTYMux, TerminalSizeError> {
-                        let terminal_size = match self.terminal_size {
-                            Some(size) => size,
-                            None => try_get_size()?,
-                        };
-                        let virtual_terminal_width = self.virtual_terminal_width;
+            let terminal_size = match self.terminal_size {
+                Some(size) => size,
+                None => try_get_size().map_err(PtyMuxError::TerminalSize)?,
+            };
+            let virtual_terminal_width = self.virtual_terminal_width;
 
-                        let processes = self
-                            .process_configs
-                            .into_iter()
-                            .map(|(name, command, args)| {
-                                Process::new_with_virtual_width(
-                                    name,
-                                    command,
-                                    args,
-                                    terminal_size,
-                                    virtual_terminal_width,
-                                )
-                            })
-                            .collect();
+            let processes = self
+                .process_configs
+                .into_iter()
+                .map(|(name, command, args)| {
+                    Process::new_with_virtual_width(
+                        name,
+                        command,
+                        args,
+                        terminal_size,
+                        virtual_terminal_width,
+                    )
+                })
+                .collect();
 
-                        emit_stderr_redirection_disclaimer();
+            emit_stderr_redirection_disclaimer();
 
-                        let output_device = OutputDevice::new_stdout();
-                        let input_device = InputDevice::default();
+            let output_device = OutputDevice::new_stdout();
+            let input_device = InputDevice::default();
 
-                        Ok(PTYMux {
-                            process_manager: ProcessManager::new(
-                                processes,
-                                terminal_size,
-                            ),
-                            output_renderer: OutputRenderer::new(terminal_size),
-                            terminal_size,
-                            output_device,
-                            input_device,
-                            maybe_input_interceptor_fn: self.maybe_input_interceptor_fn,
-                        })
-                    };
-                    match init() {
-                        Ok(mux) => TuiAvailability::Available(mux),
-                        Err(e) => TuiAvailability::Broken(e.into()),
-                    }
-                }
-            }
+            Ok(PTYMux {
+                process_manager: ProcessManager::new(processes, terminal_size),
+                output_renderer: OutputRenderer::new(terminal_size),
+                terminal_size,
+                output_device,
+                input_device,
+                maybe_input_interceptor_fn: self.maybe_input_interceptor_fn,
+            })
         }
     }
 }

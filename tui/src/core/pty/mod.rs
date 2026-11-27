@@ -463,7 +463,7 @@
 //! [`try_spawn_pty_writer_thread()`]: crate::try_spawn_pty_writer_thread
 //! [`try_start()`]: [`PtySessionBuilder::try_start()`]
 //! [`try_start_async()`]: crate::PtySessionBuilder::try_start_async
-//! [`TUI`]: crate::tui::TerminalWindow::main_event_loop
+//! [`TUI`]: crate::tui::TerminalWindow::try_main_event_loop
 //! [`write()`]: https://manpages.debian.org/write.2
 //! [`xterm-256color`]: https://en.wikipedia.org/wiki/Xterm#256-color_mode
 //! [accidental complexity]: https://www.youtube.com/watch?v=Cum5uN2634o

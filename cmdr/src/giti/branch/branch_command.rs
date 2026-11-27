@@ -8,22 +8,24 @@ use crate::{common,
                    try_handle_branch_delete_command, try_handle_branch_new_command,
                    ui_str}};
 use clap::ValueEnum;
-use r3bl_tui::{CommandRunReport, DefaultIoDevices, TuiAvailabilityChooseExt,
-               cli_text_inline, cli_text_line, inline_vec,
+use r3bl_tui::{ChooseError, ChooseFutureExt, CommandRunError, CommandRunReport,
+               DefaultIoDevices, ReadlineError, cli_text_inline, cli_text_line,
+               inline_vec,
                readline_async::{HowToChoose, StyleSheet},
                try_choose, vp_height};
 
-/// The main function to for `giti branch` command. This is the main routing function that
+/// The main function for `giti branch` command. This is the main routing function that
 /// directs execution flow to the appropriate subcommand handler: `checkout`, `delete`,
 /// `new`.
 ///
 /// # Errors
 ///
-/// Returns an error if any of the subcommands fail or if user interaction fails.
+/// Returns [`GitiBranchError`] if pre-flight git queries or interactive terminal UI
+/// operations fail.
 pub async fn try_handle_branch_command(
     sub_cmd: Option<BranchSubcommand>,
     maybe_branch_name: Option<String>,
-) -> miette::Result<CommandRunReport<CommandRunDetails>> {
+) -> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
     if let Some(subcommand) = sub_cmd {
         match subcommand {
             BranchSubcommand::Delete => {
@@ -44,7 +46,7 @@ pub async fn try_handle_branch_command(
 /// The user typed `giti branch` command with no subcommands. So prompt them for a
 /// subcommand.
 async fn try_prompt_for_sub_command()
--> miette::Result<CommandRunReport<CommandRunDetails>> {
+-> Result<CommandRunReport<CommandRunDetails>, GitiBranchError> {
     let branch_subcommand_options =
         get_giti_command_subcommand_names(CLICommand::Branch {
             sub_cmd: None,
@@ -70,8 +72,9 @@ async fn try_prompt_for_sub_command()
             StyleSheet::default(),
             default_io_devices.as_mut_tuple(),
         )
-        .get_first_result()
-        .await?
+        .try_get_first_choice()
+        .await
+        .map_err(GitiBranchError::Choose)?
     };
 
     // Early return if the user didn't select anything.
@@ -96,4 +99,25 @@ async fn try_prompt_for_sub_command()
         BranchSubcommand::Checkout => try_handle_branch_checkout_command(None).await,
         BranchSubcommand::New => try_handle_branch_new_command(None).await,
     }
+}
+
+/// Unrecoverable infrastructure errors returned by `giti branch` command handlers before
+/// a [`CommandRunReport`] can be produced.
+#[derive(Debug, thiserror::Error, miette::Diagnostic)]
+pub enum GitiBranchError {
+    /// A pre-flight `git` query failed (for example, running outside a git repository).
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Git(CommandRunError),
+
+    /// Interactive selection menu failed (non-interactive terminal or terminal I/O
+    /// error).
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Choose(ChooseError),
+
+    /// Async readline prompt failed (non-interactive terminal or terminal I/O error).
+    #[error(transparent)]
+    #[diagnostic(transparent)]
+    Readline(ReadlineError),
 }
